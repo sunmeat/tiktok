@@ -285,7 +285,7 @@ tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
         avatarUrl
     });
 });
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 server.listen(PORT, () => {
     console.log(
@@ -298,5 +298,11 @@ server.listen(PORT, () => {
         );
     }
 
-    connectToTikTok();
+    if (process.env.SIGN_API_KEY) {
+        connectToTikTok();
+    } else {
+        console.warn(
+            '[ПРЕДУПРЕЖДЕНИЕ] SIGN_API_KEY не задан. Веб-арена доступна, подключение к TikTok отключено.'
+        );
+    }
 });

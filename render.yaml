@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: tiktok-arena-test
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
