@@ -201,6 +201,129 @@
             .player-score { font-size: 9px; }
             .stats { gap: 4px 6px; font-size: 9px; }
         }
+    
+        @media (max-aspect-ratio: 3/4) {
+            body {
+                padding: clamp(5px, 1.2vw, 16px);
+                overflow: hidden;
+            }
+            .arena {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-rows: minmax(0, 1.15fr) minmax(0, .85fr);
+                gap: clamp(6px, 1vw, 12px);
+                height: 100dvh;
+            }
+            .leaderboard {
+                grid-row: 1;
+                min-height: 0;
+            }
+            .chat-panel {
+                grid-row: 2;
+                min-height: 0;
+            }
+            .panel {
+                border-radius: clamp(10px, 1.4vw, 18px);
+            }
+            .panel-head,
+            .leaderboard .panel-head {
+                padding: clamp(10px, 1.8vw, 22px) clamp(12px, 2vw, 24px);
+                gap: 10px;
+            }
+            .eyebrow {
+                font-size: clamp(9px, 1.05vw, 13px);
+            }
+            h1 {
+                font-size: clamp(16px, 2.5vw, 30px);
+            }
+            h2,
+            .leaderboard h2 {
+                font-size: clamp(16px, 2.3vw, 27px);
+            }
+            .rank-caption {
+                font-size: clamp(10px, 1.15vw, 14px);
+            }
+            .live {
+                padding: clamp(5px, .8vw, 9px) clamp(7px, 1vw, 12px);
+                font-size: clamp(8px, .95vw, 12px);
+                white-space: nowrap;
+            }
+            .players-list {
+                padding: clamp(6px, 1vw, 12px);
+                overscroll-behavior: contain;
+            }
+            .player-card {
+                grid-template-columns: clamp(24px, 3.8vw, 42px) clamp(36px, 5.5vw, 62px) minmax(0, 1fr);
+                gap: clamp(7px, 1.2vw, 14px);
+                margin-bottom: clamp(5px, .8vw, 9px);
+                padding: clamp(8px, 1.2vw, 14px);
+                border-radius: clamp(9px, 1vw, 13px);
+            }
+            .player-avatar {
+                width: clamp(36px, 5.5vw, 62px);
+                height: clamp(36px, 5.5vw, 62px);
+            }
+            .rank {
+                font-size: clamp(12px, 1.5vw, 18px);
+            }
+            .player-name {
+                font-size: clamp(12px, 1.55vw, 18px);
+            }
+            .follow-badge {
+                font-size: clamp(8px, .85vw, 11px);
+                padding: 3px 5px;
+            }
+            .player-score {
+                margin-top: 5px;
+                font-size: clamp(11px, 1.25vw, 15px);
+            }
+            .stats {
+                gap: 5px clamp(7px, 1.1vw, 13px);
+                margin-top: 6px;
+                font-size: clamp(10px, 1.1vw, 13px);
+            }
+            .chat-feed {
+                height: calc(100% - clamp(52px, 7vw, 82px));
+                padding: clamp(8px, 1.2vw, 14px);
+                gap: clamp(6px, .8vw, 10px);
+                overscroll-behavior: contain;
+            }
+            .chat-message {
+                grid-template-columns: clamp(30px, 4.5vw, 50px) minmax(0, 1fr);
+                gap: clamp(8px, 1vw, 12px);
+                padding: clamp(7px, 1vw, 12px);
+                border-radius: 10px;
+            }
+            .chat-avatar {
+                width: clamp(30px, 4.5vw, 50px);
+                height: clamp(30px, 4.5vw, 50px);
+            }
+            .chat-name {
+                font-size: clamp(11px, 1.2vw, 14px);
+            }
+            .chat-time {
+                font-size: clamp(9px, .9vw, 11px);
+            }
+            .chat-text {
+                font-size: clamp(12px, 1.3vw, 15px);
+                line-height: 1.35;
+            }
+            .chat-empty {
+                font-size: clamp(12px, 1.25vw, 15px);
+            }
+            .chat-empty strong {
+                font-size: clamp(15px, 1.6vw, 19px);
+            }
+            #alerts {
+                bottom: 16px;
+                max-width: 92%;
+                padding: clamp(10px, 1.5vw, 18px);
+                font-size: clamp(13px, 1.7vw, 20px);
+            }
+            #alerts.visible {
+                bottom: 22px;
+            }
+        }
+
     </style>
 </head>
 <body>
