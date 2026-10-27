@@ -1,6 +1,6 @@
-const tiktokConnector = require('tiktok-live-connector');
-// Защита от разницы экспорта между версиями CommonJS и ESM
-const WebcastPushConnection = tiktokConnector.WebcastPushConnection || tiktokConnector.default || tiktokConnector;
+// В tiktok-live-connector v2 класс WebcastPushConnection убран из основного экспорта
+// (теперь TikTokLiveConnection). Старый API с "плоскими" событиями лежит в /legacy.
+const { WebcastPushConnection } = require('tiktok-live-connector/legacy');
 
 const express = require('express');
 const http = require('http');
@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Укажите ваш никнейм в TikTok (без символа @)
 const tiktokUsername = "alex.stream.games";
-const tiktokLiveConnection = new WebcastPushConnection(tiktokUsername);
+const tiktokLiveConnection = new WebcastPushConnection(tiktokUsername, {});
 
 // Хранилище игроков (рейтинг)
 const players = new Map(); // ключ: uniqueId, значение: { uniqueId, nickname, profilePictureUrl, score }
