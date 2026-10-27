@@ -24,7 +24,7 @@ const wss = new WebSocketServer({ server });
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Никнейм TikTok без символа @
-const tiktokUsername = 'neversleep.420';
+const tiktokUsername = 'rezerv_realdimon2';
 
 // Подключение к TikTok с API-ключом EulerStream из .env
 const tiktokLiveConnection = new TikTokLiveConnection(tiktokUsername, {
