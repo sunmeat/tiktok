@@ -1,16 +1,20 @@
 
-require('dotenv').config();
+import 'dotenv/config';
 
-const {
+import {
     TikTokLiveConnection,
     WebcastEvent,
     ControlEvent
-} = require('tiktok-live-connector');
+} from 'tiktok-live-connector';
 
-const express = require('express');
-const http = require('http');
-const { WebSocketServer } = require('ws');
-const path = require('path');
+import express from 'express';
+import http from 'node:http';
+import { WebSocketServer } from 'ws';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Настройка веб-сервера
 const app = express();
