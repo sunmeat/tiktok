@@ -15,32 +15,20 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Настройка веб-сервера
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Никнейм TikTok без символа @
 const tiktokUsername = 'rezerv_realdimon2';
-
-// Подключение к TikTok с API-ключом EulerStream из .env
 const tiktokLiveConnection = new TikTokLiveConnection(tiktokUsername, {
     signApiKey: process.env.SIGN_API_KEY
 });
-
-// Хранилище игроков
 const players = new Map();
-
-// Настройки повторного подключения
 const DEFAULT_RECONNECT_DELAY_MS = 30000;
 let reconnectTimer = null;
 let isConnecting = false;
 let isConnected = false;
-
-// Получение идентификатора пользователя
 function getUserId(user) {
     if (!user) return 'unknown';
 
@@ -52,8 +40,6 @@ function getUserId(user) {
         'unknown'
     );
 }
-
-// Получение аватарки пользователя
 function getAvatarUrl(user) {
     if (!user) return '';
 
@@ -66,8 +52,6 @@ function getAvatarUrl(user) {
         ''
     );
 }
-
-// Отправка события подключённым браузерам и OBS
 function broadcast(type, data) {
     const message = JSON.stringify({ type, data });
 
@@ -77,8 +61,6 @@ function broadcast(type, data) {
         }
     });
 }
-
-// Подключение браузерной сцены
 wss.on('connection', ws => {
     console.log('[OBS] Браузерная сцена подключена');
 
@@ -89,8 +71,6 @@ wss.on('connection', ws => {
         )
     }));
 });
-
-// Добавление игрока и обновление его статистики
 function updatePlayerScore(userId, points, avatarUrl, nickname, activity = {}) {
     if (!players.has(userId)) {
         players.set(userId, {
@@ -139,8 +119,6 @@ function updatePlayerScore(userId, points, avatarUrl, nickname, activity = {}) {
 
     broadcast('update_leaderboard', sortedPlayers);
 }
-
-// Планирование повторного подключения
 function scheduleReconnect(delayMs = DEFAULT_RECONNECT_DELAY_MS) {
     if (reconnectTimer) return;
 
@@ -155,8 +133,6 @@ function scheduleReconnect(delayMs = DEFAULT_RECONNECT_DELAY_MS) {
         connectToTikTok();
     }, safeDelay);
 }
-
-// Подключение к TikTok
 function connectToTikTok() {
     if (isConnecting || isConnected) return;
 
@@ -174,9 +150,6 @@ function connectToTikTok() {
             const message = err?.message || String(err);
 
             console.error('[ОШИБКА] Не удалось подключиться:', message);
-
-            // При наличии retryAfter учитываем задержку сервиса.
-            // Значение retryAfter у этой ошибки передаётся в миллисекундах.
             const retryAfter = Number(err?.retryAfter);
 
             const delay = Number.isFinite(retryAfter) && retryAfter > 0
@@ -189,31 +162,23 @@ function connectToTikTok() {
             isConnecting = false;
         });
 }
-
-// Обработка отключения
 tiktokLiveConnection.on(ControlEvent.DISCONNECTED, () => {
     console.log('[ОТКЛЮЧЕНО] Соединение со стримом потеряно');
 
     isConnected = false;
     scheduleReconnect();
 });
-
-// Обработка ошибок соединения
 tiktokLiveConnection.on(ControlEvent.ERROR, err => {
     console.error(
         '[ОШИБКА СОЕДИНЕНИЯ]',
         err?.message || err
     );
 });
-
-// Завершение эфира
 tiktokLiveConnection.on(WebcastEvent.STREAM_END, () => {
     console.log('[ЭФИР ЗАВЕРШЁН]');
 
     isConnected = false;
 });
-
-// 1. Комментарии
 tiktokLiveConnection.on(WebcastEvent.CHAT, data => {
     const userId = getUserId(data.user);
     const nickname = data.user?.nickname || userId;
@@ -237,8 +202,6 @@ tiktokLiveConnection.on(WebcastEvent.CHAT, data => {
         comment
     });
 });
-
-// 2. Лайки
 tiktokLiveConnection.on(WebcastEvent.LIKE, data => {
     const userId = getUserId(data.user);
     const nickname = data.user?.nickname || userId;
@@ -259,8 +222,6 @@ tiktokLiveConnection.on(WebcastEvent.LIKE, data => {
         { likes: likeCount }
     );
 });
-
-// 3. Новые подписки
 if (WebcastEvent.FOLLOW) {
     tiktokLiveConnection.on(WebcastEvent.FOLLOW, data => {
         const userId = getUserId(data.user);
@@ -278,8 +239,6 @@ if (WebcastEvent.FOLLOW) {
         console.log(`⭐ Новая подписка: ${nickname}`);
     });
 }
-
-// 4. Подарки
 tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
     const giftType = data.giftDetails?.giftType ?? data.gift?.type;
     const giftName =
@@ -297,8 +256,6 @@ tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
         1,
         Number(data.repeatCount || 1)
     );
-
-    // Подарки со стриком учитываем после завершения серии
     const streakInProgress = giftType === 1 && !data.repeatEnd;
 
     if (streakInProgress) return;
@@ -328,8 +285,6 @@ tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
         avatarUrl
     });
 });
-
-// Запуск сервера
 const PORT = 3000;
 
 server.listen(PORT, () => {
