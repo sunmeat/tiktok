@@ -2,136 +2,361 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok Live Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TikTok Live Arena | Command Center</title>
     <style>
+        :root {
+            color-scheme: dark;
+            --bg: rgba(7, 12, 20, .94);
+            --panel: rgba(12, 21, 34, .88);
+            --line: rgba(137, 190, 220, .18);
+            --muted: #8da4b8;
+            --text: #eef7ff;
+            --cyan: #62e6ff;
+            --blue: #438bff;
+            --gold: #ffd47a;
+            --green: #73f2b0;
+        }
+        * { box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; margin: 0; }
         body {
-            margin: 0;
-            padding: 20px;
-            background: transparent; /* Прозрачный фон для OBS */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
+            padding: 22px;
             overflow: hidden;
+            background: transparent;
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            letter-spacing: .01em;
         }
-        #leaderboard {
+        .arena {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 390px;
+            gap: 18px;
+            width: 100%;
+            height: calc(100vh - 44px);
+            min-height: 0;
+        }
+        .panel {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            background: linear-gradient(145deg, rgba(10, 20, 33, .88), rgba(5, 10, 18, .78));
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: 0 18px 60px rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.035);
+            backdrop-filter: blur(16px);
+        }
+        .panel::before {
+            content: "";
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 300px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 12px;
-            padding: 15px;
-            backdrop-filter: blur(5px);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            inset: 0 0 auto;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), var(--blue), transparent);
+            opacity: .85;
         }
-        h2 {
-            margin-top: 0;
-            font-size: 20px;
-            text-align: center;
-            color: #ff0050; /* TikTok pink */
-            text-shadow: 0 0 10px rgba(255, 0, 80, 0.5);
-        }
-        .player-item {
+        .panel-head {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 8px 12px;
-            border-radius: 8px;
-            animation: fadeIn 0.3s ease;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 20px 22px 16px;
+            border-bottom: 1px solid var(--line);
         }
-        .player-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 12px;
-            border: 2px solid #00f2fe; /* TikTok cyan */
-            object-fit: cover;
+        .eyebrow {
+            color: var(--cyan);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .22em;
+            text-transform: uppercase;
         }
-        .player-info {
-            flex-grow: 1;
+        h1, h2 { margin: 5px 0 0; font-weight: 750; letter-spacing: -.035em; }
+        h1 { font-size: clamp(19px, 2vw, 27px); }
+        h2 { font-size: 21px; }
+        .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 10px;
+            border: 1px solid rgba(115,242,176,.25);
+            border-radius: 999px;
+            color: var(--green);
+            background: rgba(115,242,176,.07);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .12em;
+        }
+        .live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--green); box-shadow: 0 0 12px var(--green);
+            animation: pulse 1.8s infinite;
+        }
+        .chat-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 17px 18px 24px;
+            height: calc(100% - 83px);
             overflow: hidden;
+            mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 100%);
         }
-        .player-name {
-            font-weight: bold;
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .chat-message {
+            display: grid;
+            grid-template-columns: 36px minmax(0, 1fr);
+            gap: 11px;
+            padding: 11px 12px;
+            border: 1px solid rgba(255,255,255,.055);
+            border-radius: 12px;
+            background: rgba(255,255,255,.035);
+            animation: slideIn .28s ease both;
         }
-        .player-score {
-            font-size: 12px;
-            color: #ffaa00;
+        .chat-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #17283b; border: 1px solid rgba(98,230,255,.3); }
+        .chat-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .chat-name { font-size: 12px; font-weight: 750; color: #b9eaff; overflow-wrap: anywhere; }
+        .chat-time { color: #698197; font-size: 10px; }
+        .chat-text { color: #e8f1f9; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .chat-empty { margin: auto; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.8; }
+        .chat-empty strong { display: block; color: #d8e9f5; font-size: 16px; }
+        .leaderboard { display: flex; flex-direction: column; }
+        .leaderboard .panel-head { padding: 18px 18px 15px; }
+        .leaderboard h2 { font-size: 19px; }
+        .rank-caption { margin-top: 5px; color: var(--muted); font-size: 11px; }
+        .players-list { padding: 12px; overflow: auto; scrollbar-width: thin; scrollbar-color: #28435a transparent; }
+        .player-card {
+            position: relative;
+            display: grid;
+            grid-template-columns: 24px 43px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 11px 10px;
+            border: 1px solid rgba(255,255,255,.065);
+            border-radius: 13px;
+            background: linear-gradient(110deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+            animation: slideIn .3s ease both;
+            transition: border-color .2s, background .2s, transform .2s;
         }
+        .player-card:hover { border-color: rgba(98,230,255,.35); background: rgba(98,230,255,.055); transform: translateX(-2px); }
+        .player-card.rank-1 { border-color: rgba(255,212,122,.38); background: linear-gradient(110deg, rgba(255,212,122,.13), rgba(255,255,255,.025)); }
+        .player-card.rank-2 { border-color: rgba(199,220,239,.22); }
+        .player-card.rank-3 { border-color: rgba(220,151,108,.22); }
+        .rank { color: #8da4b8; text-align: center; font-size: 13px; font-weight: 800; }
+        .rank-1 .rank { color: var(--gold); }
+        .rank-2 .rank { color: #d6e4f2; }
+        .rank-3 .rank { color: #e5a77e; }
+        .player-avatar { width: 43px; height: 43px; border-radius: 50%; object-fit: cover; background: #17283b; border: 1px solid rgba(98,230,255,.45); }
+        .player-main { min-width: 0; }
+        .player-topline { display: flex; align-items: center; gap: 7px; min-width: 0; }
+        .player-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; color: #f2f8ff; }
+        .follow-badge { flex: 0 0 auto; color: var(--green); border: 1px solid rgba(115,242,176,.24); background: rgba(115,242,176,.07); border-radius: 4px; padding: 2px 4px; font-size: 8px; font-weight: 800; letter-spacing: .05em; }
+        .follow-badge.no { color: #8497a8; border-color: rgba(132,151,168,.2); background: rgba(132,151,168,.06); }
+        .player-score { margin-top: 4px; color: var(--gold); font-size: 10px; font-weight: 700; }
+        .stats { display: flex; flex-wrap: wrap; gap: 5px 9px; margin-top: 7px; color: #a9bdce; font-size: 10px; }
+        .stat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .stat b { color: #e7f4ff; font-weight: 750; }
+        .stat-icon { color: var(--cyan); }
+        .empty-rank { padding: 30px 12px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.7; }
         #alerts {
-            position: absolute;
-            bottom: 50px;
-            left: 50px;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            position: fixed; left: 50%; bottom: 36px; transform: translateX(-50%);
+            max-width: min(90vw, 650px); padding: 14px 22px;
+            color: white; font-size: 16px; font-weight: 750; text-align: center;
+            border: 1px solid rgba(98,230,255,.35); border-radius: 14px;
+            background: rgba(7,16,28,.95); box-shadow: 0 10px 40px rgba(0,0,0,.4), 0 0 28px rgba(67,139,255,.12);
+            opacity: 0; pointer-events: none; transition: opacity .25s, bottom .25s;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        #alerts.visible { opacity: 1; bottom: 44px; }
+        @keyframes pulse { 50% { opacity: .45; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) {
+            body { padding: 10px; }
+            .arena { grid-template-columns: minmax(0, 1fr) minmax(280px, 38%); gap: 10px; height: calc(100vh - 20px); }
+            .panel-head { padding: 15px; }
+            .players-list { padding: 8px; }
+            .player-card { grid-template-columns: 20px 36px minmax(0, 1fr); gap: 7px; padding: 9px 7px; }
+            .player-avatar { width: 36px; height: 36px; }
+            .stats { gap: 5px 7px; }
+        }
+        @media (max-width: 620px) {
+            body { padding: 7px; }
+            .arena { grid-template-columns: minmax(0, 1fr) minmax(205px, 44%); gap: 7px; height: calc(100vh - 14px); }
+            .panel { border-radius: 12px; }
+            .panel-head, .leaderboard .panel-head { padding: 12px 10px; }
+            .eyebrow { font-size: 8px; }
+            h1, h2, .leaderboard h2 { font-size: 14px; }
+            .live { padding: 5px 6px; font-size: 8px; }
+            .chat-feed { padding: 9px 7px; gap: 7px; height: calc(100% - 63px); }
+            .chat-message { grid-template-columns: 27px minmax(0, 1fr); gap: 7px; padding: 8px 7px; }
+            .chat-avatar { width: 27px; height: 27px; }
+            .chat-name { font-size: 10px; }
+            .chat-text { font-size: 11px; }
+            .chat-time, .rank-caption { font-size: 9px; }
+            .players-list { padding: 6px; }
+            .player-card { grid-template-columns: 17px 29px minmax(0, 1fr); gap: 5px; padding: 8px 5px; margin-bottom: 6px; border-radius: 9px; }
+            .player-avatar { width: 29px; height: 29px; }
+            .rank { font-size: 10px; }
+            .player-name { font-size: 10px; }
+            .follow-badge { font-size: 7px; padding: 2px 3px; }
+            .player-score { font-size: 9px; }
+            .stats { gap: 4px 6px; font-size: 9px; }
         }
     </style>
 </head>
 <body>
-
-<!-- Таблица лидеров (рейтинг арены) -->
-<div id="leaderboard">
-    <h2>🏆 ТОП АРЕНЫ</h2>
-    <div id="players-list"></div>
-</div>
-
-<div id="alerts"></div>
+    <main class="arena">
+        <section class="panel chat-panel">
+            <header class="panel-head">
+                <div>
+                    <div class="eyebrow">Arena network / 01</div>
+                    <h1>ПОТОК СОБЫТИЙ</h1>
+                </div>
+                <span class="live"><span class="live-dot"></span> LIVE CHAT</span>
+            </header>
+            <div id="chat-feed" class="chat-feed">
+                <div class="chat-empty"><strong>Канал готов к эфиру</strong>Сообщения зрителей появятся здесь в реальном времени.</div>
+            </div>
+        </section>
+        <aside class="panel leaderboard">
+            <header class="panel-head">
+                <div>
+                    <div class="eyebrow">Arena network / 02</div>
+                    <h2>🏆 РЕЙТИНГ АРЕНЫ</h2>
+                    <div class="rank-caption">Зрители · активность · вклад</div>
+                </div>
+                <span class="live"><span class="live-dot"></span> LIVE</span>
+            </header>
+            <div id="players-list" class="players-list">
+                <div class="empty-rank">Ожидаем первых зрителей…</div>
+            </div>
+        </aside>
+    </main>
+    <div id="alerts" role="status" aria-live="polite"></div>
 
 <script>
-    // Подключаемся к нашему Node.js серверу по WebSocket
-    const ws = new WebSocket(`ws://${window.location.host}`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+    const chatFeed = document.getElementById('chat-feed');
+    const playersList = document.getElementById('players-list');
+    const avatarFallback = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="32" fill="%2317283b"/%3E%3Ccircle cx="32" cy="24" r="12" fill="%2362e6ff" opacity=".7"/%3E%3Cpath d="M10 60c1-15 10-22 22-22s21 7 22 22" fill="%2362e6ff" opacity=".7"/%3E%3C/svg%3E';
+    let alertTimer;
 
     ws.onmessage = function(event) {
-        const message = JSON.parse(event.data);
-
-        if (message.type === 'init' || message.type === 'update_leaderboard') {
-            renderLeaderboard(message.data);
-        }
-
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.type === 'init' || message.type === 'update_leaderboard') renderLeaderboard(message.data || []);
+        if (message.type === 'chat_message') renderChatMessage(message.data || {});
         if (message.type === 'gift_alert') {
-            showAlert(`🎁 ${message.data.nickname} подарил ${message.data.giftName} x${message.data.count}!`);
+            const gift = message.data || {};
+            showAlert('🎁 ' + (gift.nickname || 'Зритель') + ' отправил(а) ' + (gift.giftName || 'подарок') + ' ×' + (gift.count || 1));
         }
     };
 
+    ws.onclose = () => showAlert('Связь с сервером потеряна. Переподключите источник браузера после восстановления.');
+    ws.onerror = () => console.warn('Не удалось подключиться к WebSocket арены.');
+
+    function makeAvatar(url, className) {
+        const img = document.createElement('img');
+        img.className = className;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = url || avatarFallback;
+        img.onerror = () => { img.onerror = null; img.src = avatarFallback; };
+        return img;
+    }
+
     function renderLeaderboard(players) {
-        const listEl = document.getElementById('players-list');
-        listEl.innerHTML = '';
+        playersList.replaceChildren();
+        const sorted = [...players].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0)).slice(0, 10);
+        if (!sorted.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-rank';
+            empty.textContent = 'Ожидаем первых зрителей…';
+            playersList.appendChild(empty);
+            return;
+        }
+        sorted.forEach((player, index) => {
+            const card = document.createElement('article');
+            card.className = 'player-card rank-' + (index + 1);
+            const rank = document.createElement('div');
+            rank.className = 'rank';
+            rank.textContent = String(index + 1).padStart(2, '0');
+            card.appendChild(rank);
+            card.appendChild(makeAvatar(player.profilePictureUrl, 'player-avatar'));
 
-        // Берем топ-10 игроков
-        players.slice(0, 10).forEach((player, index) => {
-            const item = document.createElement('div');
-            item.className = 'player-item';
+            const main = document.createElement('div');
+            main.className = 'player-main';
+            const topline = document.createElement('div');
+            topline.className = 'player-topline';
+            const name = document.createElement('div');
+            name.className = 'player-name';
+            name.textContent = player.nickname || player.uniqueId || 'Зритель';
+            name.title = name.textContent;
+            topline.appendChild(name);
 
-            const avatar = player.profilePictureUrl
-                ? `<img class="player-avatar" src="${player.profilePictureUrl}">`
-                : `<div class="player-avatar" style="background:#555"></div>`;
+            const follow = document.createElement('span');
+            follow.className = 'follow-badge' + (player.isFollowing ? '' : ' no');
+            follow.textContent = player.isFollowing ? '✓ FOLLOW' : 'НЕ ПОДПИСАН';
+            topline.appendChild(follow);
+            main.appendChild(topline);
 
-            item.innerHTML = `
-                    ${avatar}
-                    <div class="player-info">
-                        <div class="player-name">${index + 1}. ${player.nickname}</div>
-                        <div class="player-score">⭐ ${player.score} очков</div>
-                    </div>
-                `;
-            listEl.appendChild(item);
+            const score = document.createElement('div');
+            score.className = 'player-score';
+            score.textContent = '✦ ' + (Number(player.score) || 0).toLocaleString('ru-RU') + ' очков';
+            main.appendChild(score);
+
+            const stats = document.createElement('div');
+            stats.className = 'stats';
+            [
+                ['♥', player.likes || 0, 'лайков'],
+                ['▤', player.comments || 0, 'комм.'],
+                ['🎁', player.gifts || 0, 'подарков']
+            ].forEach(([symbol, value, label]) => {
+                const stat = document.createElement('span');
+                stat.className = 'stat';
+                const icon = document.createElement('span');
+                icon.className = 'stat-icon';
+                icon.textContent = symbol;
+                const number = document.createElement('b');
+                number.textContent = Number(value).toLocaleString('ru-RU');
+                stat.append(icon, number, document.createTextNode(' ' + label));
+                stats.appendChild(stat);
+            });
+            main.appendChild(stats);
+            card.appendChild(main);
+            playersList.appendChild(card);
         });
+    }
+
+    function renderChatMessage(data) {
+        const empty = chatFeed.querySelector('.chat-empty');
+        if (empty) empty.remove();
+        const message = document.createElement('article');
+        message.className = 'chat-message';
+        message.appendChild(makeAvatar(data.avatarUrl, 'chat-avatar'));
+        const content = document.createElement('div');
+        const meta = document.createElement('div');
+        meta.className = 'chat-meta';
+        const name = document.createElement('span');
+        name.className = 'chat-name';
+        name.textContent = data.nickname || data.uniqueId || 'Зритель';
+        const time = document.createElement('span');
+        time.className = 'chat-time';
+        time.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        meta.append(name, time);
+        const text = document.createElement('div');
+        text.className = 'chat-text';
+        text.textContent = data.comment || '';
+        content.append(meta, text);
+        message.appendChild(content);
+        chatFeed.appendChild(message);
+        while (chatFeed.children.length > 80) chatFeed.firstElementChild.remove();
+        chatFeed.scrollTop = chatFeed.scrollHeight;
     }
 
     function showAlert(text) {
         const alertsEl = document.getElementById('alerts');
-        alertsEl.innerHTML = text;
-        setTimeout(() => {
-            alertsEl.innerHTML = '';
-        }, 4000);
+        alertsEl.textContent = text;
+        alertsEl.classList.add('visible');
+        clearTimeout(alertTimer);
+        alertTimer = setTimeout(() => alertsEl.classList.remove('visible'), 4500);
     }
 </script>
 </body>
