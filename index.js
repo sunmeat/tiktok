@@ -94,19 +94,27 @@ tiktokLiveConnection.on(WebcastEvent.STREAM_END, () => {
 connectToTikTok();
 
 // Помощник для добавления/обновления игрока
-function updatePlayerScore(user, points, avatarUrl, nickname) {
+function updatePlayerScore(user, points, avatarUrl, nickname, activity = {}) {
     if (!players.has(user)) {
         players.set(user, {
             uniqueId: user,
             nickname: nickname || user,
             profilePictureUrl: avatarUrl || '',
-            score: 0
+            score: 0,
+            likes: 0,
+            comments: 0,
+            gifts: 0,
+            isFollowing: false
         });
     }
     const player = players.get(user);
     player.score += points;
     if (avatarUrl) player.profilePictureUrl = avatarUrl;
     if (nickname) player.nickname = nickname;
+    if (activity.likes) player.likes += activity.likes;
+    if (activity.comments) player.comments += activity.comments;
+    if (activity.gifts) player.gifts += activity.gifts;
+    if (activity.isFollowing) player.isFollowing = true;
 
     // Сортируем игроков по очкам (рейтинг)
     const sortedPlayers = Array.from(players.values()).sort((a, b) => b.score - a.score);
@@ -122,8 +130,8 @@ tiktokLiveConnection.on(WebcastEvent.CHAT, data => {
     const userId = getUserId(data.user);
     const comment = data.comment ?? data.content ?? '';
     console.log(`💬 Чат | ${userId}: ${comment}`);
-    updatePlayerScore(userId, 5, getAvatarUrl(data.user), data.user?.nickname);
-    broadcast('chat_message', { uniqueId: userId, comment });
+    updatePlayerScore(userId, 5, getAvatarUrl(data.user), data.user?.nickname, { comments: 1 });
+    broadcast('chat_message', { uniqueId: userId, nickname: data.user?.nickname, avatarUrl: getAvatarUrl(data.user), comment });
 });
 
 // 2. Лайки
@@ -131,8 +139,16 @@ tiktokLiveConnection.on(WebcastEvent.LIKE, data => {
     const userId = getUserId(data.user);
     const likeCount = Number(data.likeCount ?? data.count ?? 1);
     const points = Math.floor(likeCount / 10) || 1;
-    updatePlayerScore(userId, points, getAvatarUrl(data.user), data.user?.nickname);
+    updatePlayerScore(userId, points, getAvatarUrl(data.user), data.user?.nickname, { likes: likeCount });
 });
+
+// 3. Подписка на канал
+if (WebcastEvent.FOLLOW) {
+    tiktokLiveConnection.on(WebcastEvent.FOLLOW, data => {
+        const userId = getUserId(data.user);
+        updatePlayerScore(userId, 0, getAvatarUrl(data.user), data.user?.nickname, { isFollowing: true });
+    });
+}
 
 // 3. Подарки
 tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
@@ -151,7 +167,7 @@ tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
     const totalDiamonds = diamondCount * repeatCount;
 
     console.log(`🎁 Подарок! ${userId} подарил ${giftName} x${repeatCount} (очки: +${totalDiamonds})`);
-    updatePlayerScore(userId, totalDiamonds, avatarUrl, nickname);
+    updatePlayerScore(userId, totalDiamonds, avatarUrl, nickname, { gifts: repeatCount });
 
     broadcast('gift_alert', {
         uniqueId: userId,
