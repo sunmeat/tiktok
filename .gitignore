@@ -458,3 +458,4 @@
 /node_modules/ws/browser.js
 /node_modules/ws/LICENSE
 /node_modules/ws/README.md
+.env

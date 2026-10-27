@@ -1,4 +1,4 @@
-// tiktok-live-connector v2: новый API (TikTokLiveConnection + WebcastEvent)
+import 'dotenv/config';
 const { TikTokLiveConnection, WebcastEvent, ControlEvent } = require('tiktok-live-connector');
 
 const express = require('express');
@@ -15,7 +15,7 @@ const wss = new WebSocketServer({ server });
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Укажите ваш никнейм в TikTok (без символа @)
-const tiktokUsername = "alex.stream.games";
+const tiktokUsername = "neversleep.420";
 const tiktokLiveConnection = new TikTokLiveConnection(tiktokUsername, {});
 
 // Хранилище игроков (рейтинг)
