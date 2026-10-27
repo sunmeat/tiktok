@@ -1,6 +1,5 @@
-// В tiktok-live-connector v2 класс WebcastPushConnection убран из основного экспорта
-// (теперь TikTokLiveConnection). Старый API с "плоскими" событиями лежит в /legacy.
-const { WebcastPushConnection } = require('tiktok-live-connector/legacy');
+// tiktok-live-connector v2: новый API (TikTokLiveConnection + WebcastEvent)
+const { TikTokLiveConnection, WebcastEvent, ControlEvent } = require('tiktok-live-connector');
 
 const express = require('express');
 const http = require('http');
@@ -17,10 +16,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Укажите ваш никнейм в TikTok (без символа @)
 const tiktokUsername = "alex.stream.games";
-const tiktokLiveConnection = new WebcastPushConnection(tiktokUsername, {});
+const tiktokLiveConnection = new TikTokLiveConnection(tiktokUsername, {});
 
 // Хранилище игроков (рейтинг)
 const players = new Map(); // ключ: uniqueId, значение: { uniqueId, nickname, profilePictureUrl, score }
+
+// --- Помощники для разбора данных v2 (поля читаем с запасными вариантами) ---
+
+function getUserId(user) {
+    if (!user) return 'unknown';
+    return String(user.uniqueId || user.displayId || user.userId || user.id || 'unknown');
+}
+
+function getAvatarUrl(user) {
+    if (!user) return '';
+    return user.profilePictureUrl
+        || user.profilePicture?.url?.[0]
+        || user.avatarThumb?.urlList?.[0]
+        || user.avatarMedium?.urlList?.[0]
+        || user.avatarLarge?.urlList?.[0]
+        || '';
+}
 
 // Функция отправки данных всем подключенным веб-клиентам (в OBS)
 function broadcast(type, data) {
@@ -39,13 +55,43 @@ wss.on('connection', (ws) => {
     ws.send(JSON.stringify({ type: 'init', data: Array.from(players.values()) }));
 });
 
-// --- ТИКТОК СОБЫТИЯ ---
+// --- ПОДКЛЮЧЕНИЕ К ТИКТОКУ (с автоповтором, если эфир еще не начался) ---
 
-tiktokLiveConnection.connect().then(state => {
-    console.info(`[УСПЕХ] Подключено к стриму! Room ID: ${state.roomId}`);
-}).catch(err => {
-    console.error('[ОШИБКА] Не удалось подключиться к стриму:', err);
+const RECONNECT_DELAY_MS = 30000;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+    if (reconnectTimer) return;
+    console.log(`Повторная попытка через ${RECONNECT_DELAY_MS / 1000} сек...`);
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectToTikTok();
+    }, RECONNECT_DELAY_MS);
+}
+
+function connectToTikTok() {
+    tiktokLiveConnection.connect().then(state => {
+        console.info(`[УСПЕХ] Подключено к стриму! Room ID: ${state.roomId}`);
+    }).catch(err => {
+        console.error('[ОШИБКА] Не удалось подключиться к стриму:', err?.message || err);
+        scheduleReconnect();
+    });
+}
+
+tiktokLiveConnection.on(ControlEvent.DISCONNECTED, () => {
+    console.log('[ОТКЛЮЧЕНО] Соединение со стримом потеряно');
+    scheduleReconnect();
 });
+
+tiktokLiveConnection.on(ControlEvent.ERROR, err => {
+    console.error('[ОШИБКА СОЕДИНЕНИЯ]', err?.message || err);
+});
+
+tiktokLiveConnection.on(WebcastEvent.STREAM_END, () => {
+    console.log('[ЭФИР ЗАВЕРШЕН]');
+});
+
+connectToTikTok();
 
 // Помощник для добавления/обновления игрока
 function updatePlayerScore(user, points, avatarUrl, nickname) {
@@ -69,35 +115,51 @@ function updatePlayerScore(user, points, avatarUrl, nickname) {
     broadcast('update_leaderboard', sortedPlayers);
 }
 
+// --- ТИКТОК СОБЫТИЯ ---
+
 // 1. Зритель написал комментарий
-tiktokLiveConnection.on('chat', data => {
-    console.log(`💬 Чат | ${data.uniqueId}: ${data.comment}`);
-    updatePlayerScore(data.uniqueId, 5, data.profilePictureUrl, data.nickname);
-    broadcast('chat_message', { uniqueId: data.uniqueId, comment: data.comment });
+tiktokLiveConnection.on(WebcastEvent.CHAT, data => {
+    const userId = getUserId(data.user);
+    const comment = data.comment ?? data.content ?? '';
+    console.log(`💬 Чат | ${userId}: ${comment}`);
+    updatePlayerScore(userId, 5, getAvatarUrl(data.user), data.user?.nickname);
+    broadcast('chat_message', { uniqueId: userId, comment });
 });
 
 // 2. Лайки
-tiktokLiveConnection.on('like', data => {
-    const points = Math.floor(data.likeCount / 10) || 1;
-    updatePlayerScore(data.uniqueId, points, data.profilePictureUrl, data.nickname);
+tiktokLiveConnection.on(WebcastEvent.LIKE, data => {
+    const userId = getUserId(data.user);
+    const likeCount = Number(data.likeCount ?? data.count ?? 1);
+    const points = Math.floor(likeCount / 10) || 1;
+    updatePlayerScore(userId, points, getAvatarUrl(data.user), data.user?.nickname);
 });
 
 // 3. Подарки
-tiktokLiveConnection.on('gift', data => {
-    if (data.giftType === 1 || !data.repeatEnd) {
-        const totalDiamonds = data.diamondCount * data.repeatCount;
+tiktokLiveConnection.on(WebcastEvent.GIFT, data => {
+    const giftType = data.giftDetails?.giftType ?? data.gift?.type;
+    const giftName = data.giftDetails?.giftName ?? data.gift?.name ?? 'подарок';
+    const diamondCount = Number(data.giftDetails?.diamondCount ?? data.gift?.diamondCount ?? 0);
+    const repeatCount = Number(data.repeatCount || 1);
 
-        console.log(`🎁 Подарок! ${data.uniqueId} подарил ${data.giftName} (очки: +${totalDiamonds})`);
-        updatePlayerScore(data.uniqueId, totalDiamonds, data.profilePictureUrl, data.nickname);
+    // Подарки со стриком (giftType 1) считаем только по завершении серии (repeatEnd)
+    const streakInProgress = giftType === 1 && !data.repeatEnd;
+    if (streakInProgress) return;
 
-        broadcast('gift_alert', {
-            uniqueId: data.uniqueId,
-            nickname: data.nickname,
-            giftName: data.giftName,
-            count: data.repeatCount,
-            avatarUrl: data.profilePictureUrl
-        });
-    }
+    const userId = getUserId(data.user);
+    const nickname = data.user?.nickname;
+    const avatarUrl = getAvatarUrl(data.user);
+    const totalDiamonds = diamondCount * repeatCount;
+
+    console.log(`🎁 Подарок! ${userId} подарил ${giftName} x${repeatCount} (очки: +${totalDiamonds})`);
+    updatePlayerScore(userId, totalDiamonds, avatarUrl, nickname);
+
+    broadcast('gift_alert', {
+        uniqueId: userId,
+        nickname,
+        giftName,
+        count: repeatCount,
+        avatarUrl
+    });
 });
 
 // Запуск сервера на порту 3000
