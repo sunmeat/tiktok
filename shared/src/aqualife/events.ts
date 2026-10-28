@@ -112,8 +112,8 @@ export function normalizeTikTokEvent(
   if (kind === "gift") {
     const giftDetails = record(data.giftDetails);
     const gift = record(data.gift);
-    const count = safePositiveCount(data.repeatCount ?? data.giftCount ?? data.count, 1);
-    const rawGiftId = data.giftId ?? giftDetails.giftId ?? gift.id;
+    const count = safePositiveCount(data.repeatCount ?? data.repeat_count ?? data.giftCount ?? data.count ?? gift.repeat_count, 1);
+    const rawGiftId = data.giftId ?? data.gift_id ?? giftDetails.giftId ?? giftDetails.gift_id ?? gift.id ?? gift.gift_id;
     const parsedGiftId = Number(rawGiftId);
     const giftId = rawGiftId !== undefined && Number.isFinite(parsedGiftId) && parsedGiftId > 0
       ? parsedGiftId
