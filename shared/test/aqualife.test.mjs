@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   BoundedEventDeduplicator,
   BoundedGameEventQueue,
+  AQUALIFE_CONFIG,
   createAquaLifeState,
   normalizeTikTokEvent,
-  processGameEvent
+  processGameEvent,
+  stepAquaLife
 } from "../dist/index.js";
 
 test("stable provider IDs deduplicate events and one participant owns one fish", () => {
@@ -168,4 +170,93 @@ test("queued likes from the same participant are coalesced instead of discarded"
   assert.equal(batch[0].count, 7);
   assert.equal(batch[0].dedupeKey, null);
   assert.equal(queue.dropped, 0);
+});
+
+
+test("fish use smooth wandering and stay inside the logical aquarium bounds", () => {
+  const state = createAquaLifeState(540, 960);
+  const join = normalizeTikTokEvent("member", {
+    msgId: "movement-join",
+    user: { userId: "movement-viewer", nickname: "Swimmer" }
+  }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["movement-viewer"];
+  fish.x = 4;
+  fish.y = 4;
+  fish.speedPxPerSecond = 120;
+
+  let seed = 123456789;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  for (let i = 0; i < 120; i++) stepAquaLife(state, 50, (i + 1) * 50, random);
+
+  assert.equal(state.world.width, 540);
+  assert.equal(state.world.height, 960);
+  assert.ok(fish.x >= fish.size * 12);
+  assert.ok(fish.x <= state.world.width - fish.size * 12);
+  assert.ok(fish.y >= fish.size * 12);
+  assert.ok(fish.y <= state.world.height - fish.size * 12);
+  assert.ok(Number.isFinite(fish.directionX));
+  assert.ok(Number.isFinite(fish.directionY));
+  assert.ok(fish.targetDirectionX !== undefined);
+});
+
+test("like activity follows the approved 0.6 px/s formula with smoothed bounded speed", () => {
+  const state = createAquaLifeState();
+  const event = normalizeTikTokEvent("like", {
+    msgId: "speed-spike",
+    user: { userId: "speed-viewer", nickname: "Fast swimmer" },
+    likeCount: 25
+  }, 5_000);
+  assert.ok(event);
+  processGameEvent(state, event);
+  const fish = state.fish["speed-viewer"];
+
+  assert.equal(fish.speedTargetPxPerSecond, 3);
+  assert.ok(fish.speedPxPerSecond > 0);
+  assert.ok(fish.speedPxPerSecond < fish.speedTargetPxPerSecond);
+  for (let i = 0; i < 80; i++) stepAquaLife(state, 50, 5_050 + i * 50, () => 0.5);
+  assert.ok(fish.speedPxPerSecond <= AQUALIFE_CONFIG.maxSpeedPxPerSecond);
+  assert.ok(fish.speedPxPerSecond >= AQUALIFE_CONFIG.minSpeedPxPerSecond);
+  assert.ok(fish.likesPerSecondSamples.length <= AQUALIFE_CONFIG.maxLikeSamplesPerFish);
+});
+
+test("movement remains bounded with 500 fish and a burst of likes", () => {
+  const state = createAquaLifeState(540, 960);
+  for (let i = 0; i < AQUALIFE_CONFIG.maxFish; i++) {
+    const event = normalizeTikTokEvent("member", {
+      msgId: `load-join-${i}`,
+      user: { userId: `load-user-${i}`, nickname: `Viewer ${i}` }
+    }, i + 1);
+    assert.ok(event);
+    processGameEvent(state, event);
+  }
+  for (let i = 0; i < 100; i++) {
+    const event = normalizeTikTokEvent("like", {
+      msgId: `load-like-${i}`,
+      user: { userId: `load-user-${i}`, nickname: `Viewer ${i}` },
+      likeCount: 100
+    }, 10_000 + i);
+    assert.ok(event);
+    processGameEvent(state, event);
+  }
+
+  let seed = 42;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  for (let frame = 0; frame < 10; frame++) stepAquaLife(state, 50, 11_000 + frame * 50, random);
+
+  assert.equal(Object.keys(state.fish).length, AQUALIFE_CONFIG.maxFish);
+  for (const fish of Object.values(state.fish)) {
+    assert.ok(Number.isFinite(fish.x) && Number.isFinite(fish.y));
+    assert.ok(fish.x >= 0 && fish.x <= state.world.width);
+    assert.ok(fish.y >= 0 && fish.y <= state.world.height);
+    assert.ok(fish.speedPxPerSecond <= AQUALIFE_CONFIG.maxSpeedPxPerSecond);
+    assert.ok(fish.likesPerSecondSamples.length <= AQUALIFE_CONFIG.maxLikeSamplesPerFish);
+  }
 });
