@@ -99,7 +99,7 @@ function PixiEffects({gift}:{gift:GiftAlert|null}) {
     if (!element) return;
     let app: Application | undefined;
     let disposed = false;
-    let lastGift = "";
+    let lastGift: GiftAlert | null = null;
     const particles: Array<{shape:Graphics;vx:number;vy:number;life:number}> = [];
     const start = async () => {
       const pixi = new Application();
