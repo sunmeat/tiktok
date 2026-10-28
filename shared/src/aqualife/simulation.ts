@@ -93,6 +93,7 @@ export function createFishForParticipant(
     turnRateRadiansPerSecond: 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3,
     individualSpeedMultiplier: 0.9 + ((state.nextEntityNumber - 1) % 7) * 0.033,
     speedTargetPxPerSecond: config.baseSpeedPxPerSecond,
+    lastSpeedUpdateAtMs: state.nowMs,
     baseSpeedPxPerSecond: config.baseSpeedPxPerSecond,
     speedPxPerSecond: config.baseSpeedPxPerSecond,
     baseSize: config.baseFishSize,
