@@ -5,6 +5,7 @@ import {
   BoundedGameEventQueue,
   AQUALIFE_CONFIG,
   createAquaLifeState,
+  createAquaLifeRenderSnapshot,
   normalizeTikTokEvent,
   processGameEvent,
   stepAquaLife
@@ -202,6 +203,9 @@ test("fish use smooth wandering and stay inside the logical aquarium bounds", ()
   assert.ok(Number.isFinite(fish.directionX));
   assert.ok(Number.isFinite(fish.directionY));
   assert.ok(fish.targetDirectionX !== undefined);
+  const snapshotFish = createAquaLifeRenderSnapshot(state).fish.find(item => item.id === fish.id);
+  assert.ok(snapshotFish);
+  assert.equal(snapshotFish.rotation, Math.atan2(fish.directionY, fish.directionX));
 });
 
 test("like activity follows the approved 0.6 px/s formula with smoothed bounded speed", () => {
