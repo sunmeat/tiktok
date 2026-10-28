@@ -73,9 +73,9 @@ export class AquaLifePixiAdapter {
   private readonly damageStyle = new TextStyle({
     fill: "#ff5252",
     fontFamily: "Arial",
-    fontSize: 26,
+    fontSize: 15,
     fontWeight: "900",
-    stroke: { color: "#2a0606", width: 5 }
+    stroke: { color: "#2a0606", width: 3 }
   });
   private readonly fishViews = new Map<string, FishView>();
   private readonly jellyfishViews = new Map<string, JellyfishView>();
