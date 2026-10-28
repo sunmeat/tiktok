@@ -482,10 +482,14 @@ test("jellyfish damage is one HP and contact damage has a cooldown", () => {
   const first = resolveJellyfishCollision(fish, jellyfish, 2_000);
   assert.equal(first.hit, true);
   assert.equal(fish.hp, 4);
+  assert.equal(fish.lastDamageTaken, 1);
+  assert.equal(fish.damageSeq, 1, "jellyfish contact should trigger the floating damage number");
   assert.equal(resolveJellyfishCollision(fish, jellyfish, 2_500).hit, false);
   assert.equal(fish.hp, 4);
+  assert.equal(fish.damageSeq, 1, "cooldown must prevent duplicate damage numbers");
   assert.equal(resolveJellyfishCollision(fish, jellyfish, 2_950).hit, true);
   assert.equal(fish.hp, 3);
+  assert.equal(fish.damageSeq, 2);
 });
 
 
@@ -677,6 +681,28 @@ test("respawning fish continue moving even when they have no recent likes", () =
     "respawning fish should follow its shallow entry angle instead of steering toward the center");
 });
 
+
+
+test("equal-size fish fight each other when their paths cross", () => {
+  const state = createAquaLifeState();
+  const first = joinSwimmer("equal-fish-a", state);
+  const second = joinSwimmer("equal-fish-b", state);
+  first.status = "swimming";
+  second.status = "swimming";
+  first.size = second.size = 1;
+  first.x = 200; first.y = 200;
+  second.x = 220; second.y = 200;
+  first.hp = second.hp = 5;
+
+  stepAquaLife(state, 50, 1_000, () => 0.5);
+
+  assert.equal(first.hp, 4, "the first fish should take a bite");
+  assert.equal(second.hp, 4, "the second fish should bite back even with equal size and HP");
+  assert.equal(first.status, "attacking");
+  assert.equal(second.status, "attacking");
+  assert.equal(first.damageSeq, 1);
+  assert.equal(second.damageSeq, 1);
+});
 
 function seededRandom(seed) {
   let value = seed >>> 0;
