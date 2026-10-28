@@ -1,7 +1,7 @@
 export type FishSpeciesId = "standard-gray" | "dory" | `gift-${number}`;
 export type FishStatus = "spawning" | "swimming" | "attacking" | "hurt" | "dead" | "respawning";
 export type BuffKind = "max-hp" | "attack";
-export type NormalizedGameEventType = "viewer-joined" | "viewer-left" | "like" | "follow" | "gift" | "chat";
+export type NormalizedGameEventType = "viewer-joined" | "viewer-left" | "like" | "follow" | "subscribe" | "gift" | "chat";
 
 export interface AquaLifeParticipant {
   userId: string;
