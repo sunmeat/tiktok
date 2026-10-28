@@ -176,7 +176,7 @@ function updatePlayer(
   player.likes += activity.likes ?? 0;
   player.comments += activity.comments ?? 0;
   player.gifts += activity.gifts ?? 0;
-  if (activity.isFollowing) player.isFollowing = true;
+  if (activity.isFollowing !== undefined) player.isFollowing = activity.isFollowing;
   broadcast({ type: "update_leaderboard", data: leaderboard() });
 }
 
@@ -303,13 +303,22 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
       updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname, { isFollowing: true });
     });
   }
+  // Some connector versions expose an unfollow event; handle it when available.
+  const unfollowEventName = (WebcastEvent as unknown as Record<string, string>).UNFOLLOW;
+  if (unfollowEventName) {
+    onConnectorEvent(unfollowEventName, (data: RecordData) => {
+      const event = ingestEvent("member", { ...data, isFollowing: false });
+      if (!event) return;
+      updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname, { isFollowing: false });
+    });
+  }
   onConnectorEvent(WebcastEvent.SUB_NOTIFY, (data: RecordData) => {
     ingestEvent("subscribe", data);
   });
   onConnectorEvent(WebcastEvent.GIFT, (data: RecordData) => {
     const giftType = Number(data.giftDetails?.giftType ?? data.gift?.type);
     // Combo gifts emit intermediate packets. Award only on the connector's final packet.
-    if (giftType === 1 && !data.repeatEnd) return;
+    if (giftType === 1 && data.repeatEnd === false) return;
     const event = ingestEvent("gift", data);
     if (!event) return;
     const giftDetails = data.giftDetails ?? {};
