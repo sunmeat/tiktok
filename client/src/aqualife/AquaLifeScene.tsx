@@ -30,6 +30,7 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
     let adapter: AquaLifePixiAdapter | undefined;
     const state = createAquaLifeState(WORLD_WIDTH, WORLD_HEIGHT);
     const bubbles: Array<{ view: Graphics; speed: number; phase: number }> = [];
+    const pendingComments: Array<{ fishId: string; message: string }> = [];
     const rng = (seed: number) => {
       let value = seed >>> 0;
       return () => {
@@ -191,7 +192,13 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
         let processed = 0;
         while (eventsRef.current.length && processed < MAX_EVENTS_PER_FRAME) {
           const event = eventsRef.current.shift();
-          if (event) processGameEvent(state, event);
+          if (event) {
+            processGameEvent(state, event);
+            if (event.type === "chat" && event.comment?.trim()) {
+              const fish = state.fish[event.userId];
+              if (fish) pendingComments.push({ fishId: fish.id, message: event.comment });
+            }
+          }
           processed++;
         }
         stepAquaLife(state, deltaMs, state.nowMs + deltaMs, random, AQUALIFE_CONFIG);
@@ -204,6 +211,11 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
           }
         }
         adapter?.update(createAquaLifeRenderSnapshot(state), pixi.screen.width, pixi.screen.height);
+        if (adapter && pendingComments.length) {
+          for (const comment of pendingComments.splice(0, pendingComments.length)) {
+            adapter.showComment(comment.fishId, comment.message, state.nowMs);
+          }
+        }
       });
     };
 
