@@ -1,7 +1,4 @@
-import "dotenv/config";
 import dotenv from "dotenv";
-// Workspace scripts run from /server; also load the repository-root .env as a fallback.
-dotenv.config({ path: "../.env", override: false });
 import express from "express";
 import http from "node:http";
 import path from "node:path";
@@ -13,6 +10,9 @@ import { STREAMER_USERNAME } from "./config.js";
 
 type RecordData = any;
 const dirname = path.dirname(fileURLToPath(import.meta.url));
+// Resolve env files from this module, not from the shell working directory.
+// server/.env takes precedence over the repository-root .env; existing process env wins.
+dotenv.config({ path: [path.resolve(dirname, "../.env"), path.resolve(dirname, "../../.env")], override: false });
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
