@@ -7,38 +7,72 @@ export interface CombatResult {
   respawnAtMs: number | null;
 }
 
-/** Larger fish can eat a smaller fish; equal-sized fish do not eat each other. */
+function killFishOnce(target: AquaLifeFish, nowMs: number, config: AquaLifeConfig): CombatResult {
+  // The status guard makes death idempotent: repeated contacts cannot restart its timer.
+  if (target.status === "dead") return { hit: false, killed: false, respawnAtMs: target.respawnAtMs };
+  target.hp = 0;
+  target.status = "dead";
+  target.respawnAtMs = nowMs + config.respawnDelayMs;
+  target.attackAnimationUntilMs = 0;
+  return { hit: true, killed: true, respawnAtMs: target.respawnAtMs };
+}
+
+/** A larger fish can bite a smaller fish only inside its size-scaled attack radius and off cooldown. */
 export function resolveFishBite(
   attacker: AquaLifeFish,
   target: AquaLifeFish,
   nowMs: number,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): CombatResult {
-  if (attacker.id === target.id || attacker.status === "dead" || target.status === "dead" || attacker.size <= target.size) {
-    return { hit: false, killed: false, respawnAtMs: null };
-  }
-  target.hp = Math.max(0, target.hp - Math.max(1, attacker.attackDamage || config.baseBiteDamage));
-  if (target.hp > 0) return { hit: true, killed: false, respawnAtMs: null };
-  target.status = "dead";
-  target.respawnAtMs = nowMs + config.respawnDelayMs;
-  return { hit: true, killed: true, respawnAtMs: target.respawnAtMs };
+  if (
+    attacker.id === target.id ||
+    attacker.status === "dead" || attacker.status === "respawning" ||
+    target.status === "dead" || target.status === "respawning" ||
+    attacker.size <= target.size ||
+    nowMs < attacker.attackCooldownUntilMs
+  ) return { hit: false, killed: false, respawnAtMs: null };
+
+  const distance = Math.hypot(attacker.x - target.x, attacker.y - target.y);
+  const attackRange = config.attackRangePerSize * (Math.max(0, attacker.size) + Math.max(0, target.size));
+  if (distance > attackRange) return { hit: false, killed: false, respawnAtMs: null };
+
+  attacker.lastAttackAtMs = nowMs;
+  attacker.attackCooldownUntilMs = nowMs + config.attackCooldownMs;
+  attacker.attackAnimationUntilMs = nowMs + config.biteAnimationMs;
+  attacker.status = "attacking";
+
+  target.lastHurtAtMs = nowMs;
+  target.hp = Math.max(0, target.hp - Math.max(1, Math.floor(attacker.attackDamage || config.baseBiteDamage)));
+  if (target.hp <= 0) return killFishOnce(target, nowMs, config);
+  return { hit: true, killed: false, respawnAtMs: null };
 }
 
+/** Jellyfish deal one HP on contact; a per-fish cooldown prevents frame-by-frame damage loops. */
 export function resolveJellyfishCollision(
   fish: AquaLifeFish,
   jellyfish: AquaLifeJellyfish,
   nowMs: number,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): CombatResult {
-  const touching = Math.hypot(fish.x - jellyfish.x, fish.y - jellyfish.y) <= (fish.size + jellyfish.size);
-  if (!touching || fish.status === "dead") return { hit: false, killed: false, respawnAtMs: null };
+  if (fish.status === "dead" || fish.status === "respawning" || fish.status === "spawning") {
+    return { hit: false, killed: false, respawnAtMs: null };
+  }
+  if (fish.lastJellyfishHitAtMs !== null && nowMs - fish.lastJellyfishHitAtMs < config.jellyfishHitCooldownMs) {
+    return { hit: false, killed: false, respawnAtMs: null };
+  }
+  const fishRadius = Math.max(0, fish.size) * config.fishCollisionRadiusPerSize;
+  const jellyfishRadius = Math.max(0, jellyfish.size);
+  const touching = Math.hypot(fish.x - jellyfish.x, fish.y - jellyfish.y) <= fishRadius + jellyfishRadius;
+  if (!touching) return { hit: false, killed: false, respawnAtMs: null };
+
+  fish.lastJellyfishHitAtMs = nowMs;
+  fish.lastHurtAtMs = nowMs;
   fish.hp = Math.max(0, fish.hp - config.jellyfishDamage);
-  if (fish.hp > 0) return { hit: true, killed: false, respawnAtMs: null };
-  fish.status = "dead";
-  fish.respawnAtMs = nowMs + config.respawnDelayMs;
-  return { hit: true, killed: true, respawnAtMs: fish.respawnAtMs };
+  if (fish.hp <= 0) return killFishOnce(fish, nowMs, config);
+  return { hit: true, killed: false, respawnAtMs: null };
 }
 
+/** Respawn reuses the same fish entity and keeps its elite appearance and progression. */
 export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: number): boolean {
   if (fish.status !== "dead" || fish.respawnAtMs === null || nowMs < fish.respawnAtMs) return false;
   fish.status = "respawning";
@@ -47,6 +81,10 @@ export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: num
   fish.y = -Math.max(20, fish.size * 20);
   fish.directionX = 0;
   fish.directionY = 1;
+  fish.attackCooldownUntilMs = nowMs;
+  fish.attackAnimationUntilMs = 0;
+  fish.lastHurtAtMs = null;
+  fish.lastJellyfishHitAtMs = null;
   fish.respawnAtMs = null;
   return true;
 }
