@@ -220,7 +220,7 @@ test("fish use smooth wandering and stay inside the logical aquarium bounds", ()
   assert.equal(snapshotFish.rotation, Math.atan2(fish.directionY, fish.directionX));
 });
 
-test("like activity follows the approved 0.6 px/s formula with smoothed bounded speed", () => {
+test("like activity adds 0.6 px/s per like/s on top of the idle cruise speed with smoothed bounded speed", () => {
   const state = createAquaLifeState();
   const event = normalizeTikTokEvent("like", {
     msgId: "speed-spike",
@@ -231,7 +231,8 @@ test("like activity follows the approved 0.6 px/s formula with smoothed bounded 
   processGameEvent(state, event);
   const fish = state.fish["speed-viewer"];
 
-  assert.equal(fish.speedTargetPxPerSecond, 3);
+  // Idle cruise (10 px/s) plus 0.6 px/s per like/s: 5 likes/s -> 13 px/s.
+  assert.equal(fish.speedTargetPxPerSecond, AQUALIFE_CONFIG.baseSpeedPxPerSecond + 3);
   assert.ok(fish.speedPxPerSecond > 0);
   assert.ok(fish.speedPxPerSecond < fish.speedTargetPxPerSecond);
   for (let i = 0; i < 80; i++) stepAquaLife(state, 50, 5_050 + i * 50, () => 0.5);
@@ -730,7 +731,7 @@ test("fish burst and coast: speed pulses with each stroke while the average foll
     frames++;
   });
   const meanSpeed = distance / (frames * 0.016);
-  const target = AQUALIFE_CONFIG.likeSpeedPxPerSecondPerLikePerSecond * 15;
+  const target = AQUALIFE_CONFIG.baseSpeedPxPerSecond + AQUALIFE_CONFIG.likeSpeedPxPerSecondPerLikePerSecond * 15;
   assert.ok(maxSpeed > minSpeed * 3, `speed should pulse (min ${minSpeed.toFixed(2)}, max ${maxSpeed.toFixed(2)})`);
   assert.ok(meanSpeed > target * 0.6 && meanSpeed < target * 1.3,
     `mean speed ${meanSpeed.toFixed(2)} px/s should stay near the like-driven ${target} px/s`);
@@ -794,4 +795,26 @@ test("render snapshots expose the locomotion state used by the swimming animatio
   assert.equal(model.hovering, false);
   fish.hoverRemainingSeconds = 1;
   assert.equal(createAquaLifeRenderSnapshot(state).fish.find(item => item.id === fish.id)?.hovering, true);
+});
+
+
+test("idle fish never freeze: they keep moving horizontally and vertically across the tank", () => {
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const state = createAquaLifeState(540, 960, 0);
+    const fish = joinSwimmer(`idle-roamer-${seed}`, state);
+    const random = seededRandom(seed * 7919);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let windowStartX = fish.x, windowStartY = fish.y, windowFrames = 0, slowestWindow = Infinity;
+    runSwim(state, fish, 300, 0, random, f => {
+      minX = Math.min(minX, f.x); maxX = Math.max(maxX, f.x);
+      minY = Math.min(minY, f.y); maxY = Math.max(maxY, f.y);
+      if (++windowFrames === Math.round(10_000 / 16)) {
+        slowestWindow = Math.min(slowestWindow, Math.hypot(f.x - windowStartX, f.y - windowStartY));
+        windowStartX = f.x; windowStartY = f.y; windowFrames = 0;
+      }
+    });
+    assert.ok(maxX - minX > 120, `seed ${seed}: horizontal travel ${(maxX - minX).toFixed(0)} px`);
+    assert.ok(maxY - minY > 120, `seed ${seed}: vertical travel ${(maxY - minY).toFixed(0)} px`);
+    assert.ok(slowestWindow > 8, `seed ${seed}: fish nearly froze for 10 s (moved ${slowestWindow.toFixed(1)} px)`);
+  }
 });

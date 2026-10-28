@@ -175,7 +175,7 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
         bubbles.push({ view, speed: 0.15 + random() * 0.35, phase: random() * Math.PI * 2 });
       }
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 7; i++) {
         const angle = random() * Math.PI * 2;
         addJellyfish(state, {
           id: `jelly-${i + 1}`,

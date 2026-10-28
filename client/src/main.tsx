@@ -56,6 +56,7 @@ function Arena() {
   return <main className="arena">
     <PixiEffects gift={gift} />
     <section className="aquarium-panel" aria-label="AquaLife underwater scene">
+      <div className="sea-stage">
       <AquaLifeScene eventsRef={aquaEventsRef} />
       <aside className="aquarium-guide overlay-panel" aria-label="How to play">
         <div className="guide-title">HOW TO PLAY</div>
@@ -66,7 +67,6 @@ function Arena() {
           <li><b>Gifts</b><span>More power</span></li>
         </ul>
       </aside>
-    </section>
     <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
       <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong><span className="online-count"><i />{players.length.toLocaleString("en-US")} ONLINE</span></header>
       <div className="rank-caption">@{username}</div>
@@ -82,6 +82,8 @@ function Arena() {
         </article>)}
       </div>
     </aside>
+      </div>
+    </section>
   </main>;
 }
 

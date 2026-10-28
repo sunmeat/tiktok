@@ -35,13 +35,21 @@ function pickWaypoint(
   config: AquaLifeConfig
 ): void {
   const heading = Math.atan2(fish.directionY, fish.directionX);
-  // Mostly gentle course changes (about +/-60 degrees); occasionally a wide one to explore.
-  const spread = random() < 0.2 ? 2.0 : 1.05;
-  const angle = heading + (random() * 2 - 1) * spread;
-  const distance = config.waypointMinDistance + random() * Math.max(0, config.waypointMaxDistance - config.waypointMinDistance);
   const inset = Math.min(margin * 1.5, Math.min(world.width, world.height) / 2 - 1);
-  fish.targetX = clamp(fish.x + Math.cos(angle) * distance, inset, world.width - inset);
-  fish.targetY = clamp(fish.y + Math.sin(angle) * distance, inset, world.height - inset);
+  if (random() < 0.35) {
+    // Roam: head for any spot in the tank (up, down, left or right) so idle fish keep
+    // exploring the whole aquarium instead of lingering along the walls. The turn-rate limit
+    // still makes the path a smooth arc, and there is no fixed target such as the center.
+    fish.targetX = inset + random() * Math.max(1, world.width - inset * 2);
+    fish.targetY = inset + random() * Math.max(1, world.height - inset * 2);
+  } else {
+    // Mostly gentle course changes (about +/-60 degrees); occasionally a wide one to explore.
+    const spread = random() < 0.2 ? 2.0 : 1.05;
+    const angle = heading + (random() * 2 - 1) * spread;
+    const distance = config.waypointMinDistance + random() * Math.max(0, config.waypointMaxDistance - config.waypointMinDistance);
+    fish.targetX = clamp(fish.x + Math.cos(angle) * distance, inset, world.width - inset);
+    fish.targetY = clamp(fish.y + Math.sin(angle) * distance, inset, world.height - inset);
+  }
   const intervalRange = Math.max(0, config.maxWanderIntervalSeconds - config.minWanderIntervalSeconds);
   fish.wanderTimeRemaining = Math.max(3.5, config.minWanderIntervalSeconds + random() * intervalRange);
 }

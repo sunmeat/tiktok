@@ -73,7 +73,8 @@ export function updateLikeActivitySpeed(
   }
   const totalInWindow = fish.likesPerSecondSamples.reduce((sum, sample) => sum + sample.count, 0);
   const likesPerSecond = totalInWindow * 1000 / Math.max(1, config.likeActivityWindowMs);
-  const rawTarget = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
+  // Idle cruise speed plus the like bonus (0.6 px/s per like/s): fish never stand still.
+  const rawTarget = config.baseSpeedPxPerSecond + config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
   fish.speedTargetPxPerSecond = Math.max(
     config.minSpeedPxPerSecond,
     Math.min(config.maxSpeedPxPerSecond, rawTarget)

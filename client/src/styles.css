@@ -6,16 +6,17 @@ body{overflow:hidden;background:#031b2b;color:var(--text);font-family:Inter,"Seg
 .pixi-effects{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
 .pixi-effects canvas{display:block;width:100%;height:100%}
 .aquarium-panel{position:absolute;inset:0;z-index:1;overflow:hidden;background:radial-gradient(ellipse at 22% 8%,#1d718555,transparent 42%),linear-gradient(180deg,#073e5b,#062d47 58%,#051d30)}
+.sea-stage{container:sea/size;position:absolute;left:50%;top:50%;width:min(100vw,calc(100dvh*9/16));height:min(100dvh,calc(100vw*16/9));transform:translate(-50%,-50%);overflow:hidden;background:linear-gradient(180deg,#073e5b,#062d47 58%,#051d30);box-shadow:0 0 0 1px rgba(140,236,255,.18),0 10px 40px #0006}
 .aquarium-canvas{position:absolute;inset:0;overflow:hidden}
 .aquarium-canvas canvas{display:block;width:100%;height:100%}
 .overlay-panel{position:absolute;z-index:4;color:var(--text);border:1px solid rgba(140,236,255,.27);border-radius:10px;background:rgba(2,17,30,.66);box-shadow:0 5px 22px #0003;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
-.aquarium-guide{left:max(10px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));width:clamp(116px,31vw,176px);padding:10px 11px;pointer-events:none}
+.aquarium-guide{left:10px;bottom:12px;width:clamp(116px,31cqw,176px);padding:10px 11px;pointer-events:none}
 .guide-title{margin-bottom:7px;color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.12em}
 .aquarium-guide ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
 .aquarium-guide li{display:flex;justify-content:space-between;gap:7px;font-size:10px;line-height:1.25}
 .aquarium-guide li b{color:#f3fbff;font-size:10px;font-weight:750}
 .aquarium-guide li span{color:#b0c9d7;font-size:9px;text-align:right}
-.leaderboard{right:max(10px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:clamp(164px,43vw,270px);max-height:min(44dvh,420px);padding:9px;overflow:hidden;display:flex;flex-direction:column;gap:4px}
+.leaderboard{right:10px;bottom:12px;width:clamp(164px,43cqw,270px);max-height:min(44cqh,420px);padding:9px;overflow:hidden;display:flex;flex-direction:column;gap:4px}
 .leaderboard-head{display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:11px;letter-spacing:.04em}.online-count{display:inline-flex;align-items:center;gap:4px;color:var(--green);font-size:8px;font-weight:900;white-space:nowrap}.online-count i{width:5px;height:5px;border-radius:50%;background:currentColor}.player-topline{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0}.follow-badge{flex:none;color:#8cecff;font-size:7px;font-weight:900;white-space:nowrap}.follow-badge.no{color:#91a4b0}
 .rank-caption{color:var(--muted);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status{display:inline-flex;align-items:center;gap:4px;padding:3px 5px;border:1px solid #73f2b040;border-radius:999px;font-size:7px;font-weight:800;white-space:nowrap}
@@ -33,5 +34,4 @@ body{overflow:hidden;background:#031b2b;color:var(--text);font-family:Inter,"Seg
 .stats{display:flex;flex-wrap:wrap;gap:3px 7px;margin-top:3px;color:#b7cbd7;font-size:9px}
 .stats b{color:#f3fbff;font-size:9px}
 .empty{padding:8px 3px;color:var(--muted);font-size:10px;line-height:1.4}
-@media(max-width:420px){.aquarium-guide{left:6px;bottom:max(8px,env(safe-area-inset-bottom));width:clamp(112px,34vw,145px);padding:7px 8px}.guide-title{font-size:9px;margin-bottom:5px}.aquarium-guide ul{gap:5px}.aquarium-guide li,.aquarium-guide li b{font-size:9px}.aquarium-guide li span{font-size:8px}.leaderboard{right:6px;bottom:max(8px,env(safe-area-inset-bottom));width:clamp(150px,43vw,190px);max-height:42dvh;padding:7px}.leaderboard-head{font-size:10px}.online-count{font-size:7px}.follow-badge{font-size:6px}.player-card{grid-template-columns:15px 23px minmax(0,1fr);gap:4px;padding:4px 3px}.player-avatar{width:23px;height:23px}.player-name,.stats,.stats b{font-size:8px}.stats{gap:2px 5px}}
-@media(orientation:landscape){.aquarium-guide{width:155px}.leaderboard{max-height:58dvh;width:230px}}
+@container sea (max-width:420px){.aquarium-guide{left:6px;bottom:8px;width:clamp(112px,34cqw,145px);padding:7px 8px}.guide-title{font-size:9px;margin-bottom:5px}.aquarium-guide ul{gap:5px}.aquarium-guide li,.aquarium-guide li b{font-size:9px}.aquarium-guide li span{font-size:8px}.leaderboard{right:6px;bottom:8px;width:clamp(150px,43cqw,190px);max-height:42cqh;padding:7px}.leaderboard-head{font-size:10px}.online-count{font-size:7px}.follow-badge{font-size:6px}.player-card{grid-template-columns:15px 23px minmax(0,1fr);gap:4px;padding:4px 3px}.player-avatar{width:23px;height:23px}.player-name,.stats,.stats b{font-size:8px}.stats{gap:2px 5px}}
