@@ -41,3 +41,19 @@
   .empty{padding:8px;font-size:10px;line-height:1.4}
   .empty strong{font-size:12px}
 }
+
+
+/* Two-panel English stream layout: aquarium plus live leaderboard. */
+.arena{grid-template-columns:minmax(0,1fr) minmax(270px,360px);grid-template-rows:minmax(0,1fr);gap:12px;padding:12px}
+.aquarium-panel{grid-column:1;grid-row:1}
+.leaderboard{grid-column:2;grid-row:1}
+@media(max-width:1100px) and (min-width:621px){
+  .arena{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.5fr) minmax(220px,.8fr)}
+  .aquarium-panel{grid-column:1;grid-row:1}
+  .leaderboard{grid-column:1;grid-row:2}
+}
+@media(max-width:620px), (max-aspect-ratio:3/5){
+  .arena{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.65fr) minmax(0,.8fr)}
+  .aquarium-panel{grid-column:1;grid-row:1}
+  .leaderboard{grid-column:1;grid-row:2}
+}
