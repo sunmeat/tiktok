@@ -77,10 +77,12 @@ export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: num
   if (fish.status !== "dead" || fish.respawnAtMs === null || nowMs < fish.respawnAtMs) return false;
   fish.status = "respawning";
   fish.hp = Math.max(1, fish.hp);
-  fish.x = world.width / 2;
-  fish.y = -Math.max(20, fish.size * 20);
-  fish.directionX = 0;
-  fish.directionY = 1;
+  const spawnOffset = Math.max(20, fish.size * 20);
+  const fromLeft = Math.random() < 0.5;
+  fish.x = fromLeft ? -spawnOffset : world.width + spawnOffset;
+  fish.y = world.height * (0.08 + Math.random() * 0.84);
+  fish.directionX = fromLeft ? 1 : -1;
+  fish.directionY = 0;
   fish.attackCooldownUntilMs = nowMs;
   fish.attackAnimationUntilMs = 0;
   fish.lastHurtAtMs = null;
