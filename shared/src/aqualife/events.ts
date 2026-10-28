@@ -27,7 +27,8 @@ export function normalizeTikTokEvent(
 ): NormalizedGameEvent | null {
   const data = record(payload);
   const user = record(data.user ?? data);
-  // Prefer provider identifiers that are not display names; usernames are the fallback only.\n  const userId = stringValue(user.userId, user.id, user.secUid, user.uniqueId, user.displayId, data.userId, data.uniqueId);
+  // Prefer provider identifiers that are not display names; usernames are the fallback only.
+  const userId = stringValue(user.userId, user.id, user.secUid, user.uniqueId, user.displayId, data.userId, data.uniqueId);
   if (!userId || userId.toLowerCase() === "unknown") return null;
 
   const avatar = record(user.profilePicture);
@@ -38,7 +39,10 @@ export function normalizeTikTokEvent(
     record(user.avatarThumb).urlList instanceof Array ? (record(user.avatarThumb).urlList as unknown[])[0] : undefined
   );
   const nickname = stringValue(user.nickname, user.uniqueId, userId);
-  const providerEventId = stringValue(data.msgId, data.messageId, data.eventId);\n  const dedupeKey = providerEventId ? `${kind}:${providerEventId}` : null;\n  // Without a provider ID, keep a unique diagnostic ID but do not pretend it can deduplicate delivery.\n  const eventId = dedupeKey ?? `untracked:${kind}:${userId}:${receivedAtMs}`;
+  const providerEventId = stringValue(data.msgId, data.messageId, data.eventId);
+  const dedupeKey = providerEventId ? `${kind}:${providerEventId}` : null;
+  // Without a provider ID, keep a unique diagnostic ID but do not pretend it can deduplicate delivery.
+  const eventId = dedupeKey ?? `untracked:${kind}:${userId}:${receivedAtMs}`;
 
   if (kind === "member") return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
   if (kind === "like") {
