@@ -113,11 +113,11 @@ These rules were confirmed by the project owner and should be treated as impleme
 - AquaLife is the primary game in this TikTok LIVE overlay project. Preserve existing chat, gift, subscription, connection, and server-status functionality.
 - A new fish starts with 5 HP. Maximum HP is unlimited; do not introduce a gameplay cap on HP, because ongoing engagement and gifts should continue to matter. Avoid unsafe numeric overflow in implementation without imposing an arbitrary gameplay limit.
 - Every full 5 accumulated likes grants +1 HP. Count likes cumulatively across events and preserve the remainder, preventing lost progress when likes arrive in separate events.
-- A fish eaten by a larger fish disappears from the aquarium scene and respawns after 5 seconds. On respawn it keeps its fish species/appearance and swims in from beyond the screen boundary toward the aquarium center.
+- A fish eaten by a larger fish disappears from the aquarium scene and respawns after 5 seconds. On respawn it keeps its fish species/appearance and swims in from beyond the left or right screen boundary at a shallow, varied angle, then wanders freely without any center-seeking target.
 - Appearance persistence: default fish are gray; a subscription changes the fish to the Dory appearance; gifts can unlock one of 10 additional fish appearances. A fish retains its unlocked/current appearance through death and respawn. The precedence between subscription appearance and gift-unlocked species still needs to be clarified.
 - The aquarium is continuous, with no automatic round end. One fish dying does not end the game.
 - Base bite damage is 1 HP; jellyfish collision damage is 1 HP.
-- Fish enter the aquarium slowly from beyond the left or right edge at a random height; new fish must not spawn in the center. Entry speed is a calm, steady 28 px/s and is independent of likes so the entrance remains smooth.
+- Fish enter the aquarium slowly from beyond the left or right edge at a random height and a shallow, varied angle; new fish must not spawn in the center. Entry speed is a calm, steady 28 px/s and is independent of likes so the entrance remains smooth. Once inside, fish wander freely with gradual turns and avoid only nearby walls. There is no attraction to the center and no intentional target selection for collisions; bites happen naturally when paths cross.
 - After entering, fish swimming speed is driven by likes per second: 5 likes/s = 3 px/s, 10 likes/s = 6 px/s, and 15 likes/s = 9 px/s. The linear mapping is 0.6 px/s per like/s, based on a smoothed rolling activity window rather than individual event spikes. Idle fish cruise at 1.5 px/s. Tune the window and minimum speed during testing; do not claim the exact feel is validated until tested.
 - If a viewer leaves, their fish remains in the aquarium under AI control. Active-viewer count and total living fish count must be tracked separately.
 - Entry events may be delayed or unavailable for some viewers. Do not invent individual viewers from the total viewer count; create/associate a fish only when the connector provides a sufficiently identifiable event.
@@ -133,3 +133,11 @@ These rules were confirmed by the project owner and should be treated as impleme
 - Deduplicate only when the connector supplies a stable provider event ID. Never use a synthetic timestamp/user key to suppress otherwise legitimate repeated likes.
 - Guard every connector callback with connection identity so late callbacks from a disconnected connection cannot affect the active stream. Keep at most one reconnect timer and redact signing secrets from error messages.
 - Keep diagnostics aggregate-only: do not expose signing keys or raw connector payloads through health endpoints. Participant and expected-fish estimates must not be presented as authoritative living-fish counts while simulation remains client-side.
+
+
+## Mobile-first stream composition
+
+- The entire viewport is the aquarium stage. Do not render a separate AquaLife title/header or reserve space outside the scene.
+- Design for a vertical 9:16 TikTok LIVE / OBS Browser Source composition first.
+- Place a compact, translucent HOW TO PLAY panel at the lower-left of the scene and a compact, translucent leaderboard at the lower-right. Keep both panels readable on phone screens and do not let either panel become a full page column.
+- The leaderboard shows gifts and likes, never comment counts. Rank by gifts descending first, then likes descending as the tie-breaker.
