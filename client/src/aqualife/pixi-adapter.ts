@@ -385,7 +385,7 @@ export class AquaLifePixiAdapter {
       lastFeedback: null,
       lastCombatFeedback: null,
       lastSpecies: fish.species,
-      lastDamageSeq: fish.damageSeq,
+      lastDamageSeq: 0,
       tailJointX: -getFishSpeciesDefinition(fish.species).bodyLength * 0.66,
       tailPhase: Math.random() * TWO_PI,
       swayPhase: Math.random() * TWO_PI,
