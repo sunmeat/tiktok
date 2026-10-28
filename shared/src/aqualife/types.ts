@@ -1,0 +1,106 @@
+export type FishSpeciesId = "standard-gray" | "dory" | `gift-${number}`;
+export type FishStatus = "spawning" | "swimming" | "attacking" | "hurt" | "dead" | "respawning";
+export type BuffKind = "max-hp" | "attack";
+export type NormalizedGameEventType = "viewer-joined" | "viewer-left" | "like" | "follow" | "gift" | "chat";
+
+export interface AquaLifeParticipant {
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  isActive: boolean;
+  isFollowing: boolean;
+  likesTotal: number;
+  likesRemainderForHp: number;
+  unlockedSpecies: FishSpeciesId[];
+  subscribed: boolean;
+}
+
+export interface AquaLifeBuff {
+  id: string;
+  kind: BuffKind;
+  level: number;
+  amount: number;
+  expiresAtMs: number | null;
+}
+
+export interface AquaLifeFish {
+  id: string;
+  participantId: string;
+  nickname: string;
+  avatarUrl: string;
+  species: FishSpeciesId;
+  status: FishStatus;
+  x: number;
+  y: number;
+  directionX: number;
+  directionY: number;
+  speedPxPerSecond: number;
+  size: number;
+  hp: number;
+  attackDamage: number;
+  isAiControlled: boolean;
+  likesPerSecondSamples: Array<{ atMs: number; count: number }>;
+  respawnAtMs: number | null;
+  buffs: AquaLifeBuff[];
+}
+
+export interface AquaLifeJellyfish {
+  id: string;
+  x: number;
+  y: number;
+  directionX: number;
+  directionY: number;
+  speedPxPerSecond: number;
+  size: number;
+}
+
+export interface AquaLifeWorld {
+  width: number;
+  height: number;
+}
+
+export interface AquaLifeGameState {
+  world: AquaLifeWorld;
+  participants: Record<string, AquaLifeParticipant>;
+  fish: Record<string, AquaLifeFish>;
+  jellyfish: Record<string, AquaLifeJellyfish>;
+  activeParticipantCount: number;
+  livingFishCount: number;
+  nextEntityNumber: number;
+  nowMs: number;
+}
+
+export interface NormalizedGameEvent {
+  type: NormalizedGameEventType;
+  eventId: string;
+  userId: string;
+  nickname: string;
+  avatarUrl: string;
+  receivedAtMs: number;
+  count?: number;
+  giftId?: number;
+  giftName?: string;
+  isFollowing?: boolean;
+  comment?: string;
+}
+
+export interface FishRenderModel {
+  id: string;
+  species: FishSpeciesId;
+  nickname: string;
+  avatarUrl: string;
+  x: number;
+  y: number;
+  rotation: number;
+  size: number;
+  hp: number;
+  status: FishStatus;
+}
+
+export interface AquaLifeRenderSnapshot {
+  world: AquaLifeWorld;
+  fish: FishRenderModel[];
+  jellyfish: AquaLifeJellyfish[];
+  activeParticipantCount: number;
+  livingFishCount: number;
+}
