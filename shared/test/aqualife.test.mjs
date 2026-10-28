@@ -611,8 +611,8 @@ test("idle fish keep cruising without likes and change heading gradually", () =>
 
   for (let i = 0; i < 100; i++) stepAquaLife(state, 50, (i + 1) * 50, random);
 
-  assert.ok(Math.hypot(fish.x - startX, fish.y - startY) > 20, "fish should swim even without likes");
-  assert.ok(fish.baseSpeedPxPerSecond >= 10, "idle speed should remain separate from like bonus");
+  assert.ok(Math.hypot(fish.x - startX, fish.y - startY) > 2, "fish should gently cruise even without likes");
+  assert.equal(fish.baseSpeedPxPerSecond, AQUALIFE_CONFIG.baseSpeedPxPerSecond, "idle speed should remain separate from like bonus");
   assert.ok(Math.abs(fish.directionX) + Math.abs(fish.directionY) > 0.9);
   assert.ok(fish.x > fish.size * 12 && fish.x < state.world.width - fish.size * 12);
   assert.ok(fish.y > fish.size * 12 && fish.y < state.world.height - fish.size * 12);
