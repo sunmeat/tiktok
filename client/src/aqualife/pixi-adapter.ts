@@ -7,6 +7,7 @@ interface FishView {
   label: Text;
   lastLabel: string;
   lastFeedback: FishRenderModel["rewardFeedback"];
+  lastCombatFeedback: FishRenderModel["combatFeedback"];
 }
 
 /**
@@ -16,6 +17,7 @@ interface FishView {
 export class AquaLifePixiAdapter {
   readonly root = new Container();
   private readonly fishViews = new Map<string, FishView>();
+  private readonly jellyfishViews = new Map<string, Graphics>();
   private readonly labelStyle = new TextStyle({
     fill: "#e8fbff",
     fontFamily: "Arial",
@@ -46,20 +48,24 @@ export class AquaLifePixiAdapter {
       view.root.position.set(fish.x, fish.y);
       view.root.rotation = fish.rotation;
       const bodyScale = Math.max(0.2, fish.size);
-      view.body.scale.set(bodyScale);
+      const combatScale = fish.combatFeedback === "attack" ? 1.22 : fish.combatFeedback === "hurt" ? 0.82 : 1;
+      view.body.scale.set(bodyScale * combatScale);
       const label = `${fish.nickname} · ${fish.hp} HP`;
       if (label !== view.lastLabel) {
         view.label.text = label;
         view.lastLabel = label;
       }
       view.label.position.set(0, 18 * bodyScale);
-      if (fish.rewardFeedback !== view.lastFeedback) {
+      if (fish.rewardFeedback !== view.lastFeedback || fish.combatFeedback !== view.lastCombatFeedback) {
         view.body.tint =
           fish.rewardFeedback === "growth" ? 0xffd45c
           : fish.rewardFeedback === "heal" ? 0x68ff9b
           : fish.rewardFeedback === "activity" ? 0x73e8ff
+          : fish.combatFeedback === "hurt" ? 0xff6868
+          : fish.combatFeedback === "attack" ? 0xff9c52
           : 0xffffff;
         view.lastFeedback = fish.rewardFeedback;
+        view.lastCombatFeedback = fish.combatFeedback;
       }
       view.root.alpha = fish.status === "dead" ? 0 : 1;
     }
@@ -69,11 +75,39 @@ export class AquaLifePixiAdapter {
       view.root.destroy({ children: true });
       this.fishViews.delete(id);
     }
+
+    const seenJellyfish = new Set<string>();
+    for (const jellyfish of snapshot.jellyfish) {
+      seenJellyfish.add(jellyfish.id);
+      let view = this.jellyfishViews.get(jellyfish.id);
+      if (!view) {
+        view = new Graphics()
+          .circle(0, 0, Math.max(4, jellyfish.size))
+          .fill({ color: 0xb78cff, alpha: 0.85 })
+          .moveTo(-jellyfish.size * 0.65, jellyfish.size * 0.45)
+          .lineTo(-jellyfish.size * 0.9, jellyfish.size * 1.2)
+          .moveTo(0, jellyfish.size * 0.45)
+          .lineTo(0, jellyfish.size * 1.25)
+          .moveTo(jellyfish.size * 0.65, jellyfish.size * 0.45)
+          .lineTo(jellyfish.size * 0.9, jellyfish.size * 1.2)
+          .stroke({ color: 0xe6d9ff, width: 2 });
+        this.root.addChild(view);
+        this.jellyfishViews.set(jellyfish.id, view);
+      }
+      view.position.set(jellyfish.x, jellyfish.y);
+    }
+    for (const [id, view] of this.jellyfishViews) {
+      if (seenJellyfish.has(id)) continue;
+      view.destroy();
+      this.jellyfishViews.delete(id);
+    }
   }
 
   destroy(): void {
     for (const view of this.fishViews.values()) view.root.destroy({ children: true });
     this.fishViews.clear();
+    for (const view of this.jellyfishViews.values()) view.destroy();
+    this.jellyfishViews.clear();
     this.root.destroy({ children: true });
   }
 
@@ -90,7 +124,7 @@ export class AquaLifePixiAdapter {
     label.anchor.set(0.5, 0);
     root.addChild(body, label);
     this.root.addChild(root);
-    const view = { root, body, label, lastLabel: label.text, lastFeedback: null };
+    const view = { root, body, label, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null };
     this.fishViews.set(fish.id, view);
     return view;
   }
