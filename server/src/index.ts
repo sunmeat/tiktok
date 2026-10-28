@@ -271,8 +271,11 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     const event = ingestEvent("member", data);
     if (event) updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname);
   });
-  const leaveEventName = (WebcastEvent as unknown as Record<string, string>).LEAVE;
-  if (leaveEventName) onConnectorEvent(leaveEventName, (data: RecordData) => handleViewerLeft(data));
+  const webcastEventNames = WebcastEvent as unknown as Record<string, string>;
+  for (const key of ["LEAVE", "USER_LEAVE", "MEMBER_LEAVE", "VIEWER_LEAVE"]) {
+    const leaveEventName = webcastEventNames[key];
+    if (leaveEventName) onConnectorEvent(leaveEventName, (data: RecordData) => handleViewerLeft(data));
+  }
   onConnectorEvent(WebcastEvent.CHAT, (data: RecordData) => {
     const event = ingestEvent("chat", data);
     if (!event) return;
