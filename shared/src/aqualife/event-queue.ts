@@ -22,6 +22,20 @@ export class BoundedGameEventQueue {
   }
 
   enqueue(event: NormalizedGameEvent): QueueEnqueueResult {
+    // Coalesce queued likes from the same participant before applying backpressure.
+    // The server has already deduplicated provider IDs, so summing distinct packets is safe.
+    if (event.type === "like") {
+      const existing = this.items.find(item => item.type === "like" && item.userId === event.userId);
+      if (existing) {
+        existing.count = Math.min(1_000_000, (existing.count ?? 0) + (event.count ?? 0));
+        existing.receivedAtMs = Math.max(existing.receivedAtMs, event.receivedAtMs);
+        existing.eventId = `batch:like:${event.userId}:${existing.receivedAtMs}`;
+        existing.dedupeKey = null;
+        if (event.nickname) existing.nickname = event.nickname;
+        if (event.avatarUrl) existing.avatarUrl = event.avatarUrl;
+        return { accepted: true, dropped: 0 };
+      }
+    }
     let dropped = 0;
     if (this.items.length >= this.capacity) {
       if (event.type === "like") {
