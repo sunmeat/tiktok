@@ -397,6 +397,7 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState, config: A
       size: fish.size,
       hp: fish.hp,
       maxHp: fish.maxHp,
+      baseAttackDamage: fish.baseAttackDamage,
       attackDamage: fish.attackDamage,
       status: fish.status,
       alpha: Math.min(
