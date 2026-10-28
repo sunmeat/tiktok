@@ -100,24 +100,28 @@ function scheduleReconnect(delay = reconnectDelay): void {
 }
 
 function attachEvents(connection: TikTokLiveConnection, username: string): void {
-  connection.on(ControlEvent.DISCONNECTED, () => {
+  // v2.5.0 exposes .on() at runtime, but its public class type omits the emitter method.
+  const onConnectorEvent = (event: string, listener: (...args: any[]) => void): void => {
+    (connection as unknown as { on: (name: string, handler: (...args: any[]) => void) => unknown }).on(event, listener);
+  };
+  onConnectorEvent(ControlEvent.DISCONNECTED, () => {
     if (tiktok !== connection) return;
     connected = false;
     publishConnectionStatus(false);
     scheduleReconnect();
   });
-  connection.on(ControlEvent.ERROR, (error: RecordData) => console.error("[tiktok] Connection error:", error?.message || error));
-  connection.on(WebcastEvent.STREAM_END, () => {
+  onConnectorEvent(ControlEvent.ERROR, (error: RecordData) => console.error("[tiktok] Connection error:", error?.message || error));
+  onConnectorEvent(WebcastEvent.STREAM_END, () => {
     if (tiktok !== connection) return;
     connected = false;
     publishConnectionStatus(false);
     console.log(`[tiktok] @${username}'s LIVE ended.`);
     scheduleReconnect();
   });
-  connection.on(WebcastEvent.MEMBER, (data: RecordData) => {
+  onConnectorEvent(WebcastEvent.MEMBER, (data: RecordData) => {
     publishGameEvent(normalizeTikTokEvent("member", data));
   });
-  connection.on(WebcastEvent.CHAT, (data: RecordData) => {
+  onConnectorEvent(WebcastEvent.CHAT, (data: RecordData) => {
     publishGameEvent(normalizeTikTokEvent("chat", data));
     const id = userId(data.user);
     const nickname = String(data.user?.nickname || id);
@@ -126,23 +130,23 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     updatePlayer(id, 5, message.avatarUrl, nickname, { comments: 1 });
     broadcast({ type: "chat_message", data: message });
   });
-  connection.on(WebcastEvent.LIKE, (data: RecordData) => {
+  onConnectorEvent(WebcastEvent.LIKE, (data: RecordData) => {
     publishGameEvent(normalizeTikTokEvent("like", data));
     const id = userId(data.user);
     const count = Math.max(1, Number(data.likeCount ?? data.count ?? 1) || 1);
     updatePlayer(id, Math.max(1, Math.floor(count / 10)), avatar(data.user), String(data.user?.nickname || id), { likes: count });
   });
   if (WebcastEvent.FOLLOW) {
-    connection.on(WebcastEvent.FOLLOW, (data: RecordData) => {
+    onConnectorEvent(WebcastEvent.FOLLOW, (data: RecordData) => {
       publishGameEvent(normalizeTikTokEvent("follow", data));
       const id = userId(data.user);
       updatePlayer(id, 0, avatar(data.user), String(data.user?.nickname || id), { isFollowing: true });
     });
   }
-  connection.on(WebcastEvent.SUB_NOTIFY, (data: RecordData) => {
+  onConnectorEvent(WebcastEvent.SUB_NOTIFY, (data: RecordData) => {
     publishGameEvent(normalizeTikTokEvent("subscribe", data));
   });
-  connection.on(WebcastEvent.GIFT, (data: RecordData) => {
+  onConnectorEvent(WebcastEvent.GIFT, (data: RecordData) => {
     const giftType = data.giftDetails?.giftType ?? data.gift?.type;
     const giftName = String(data.giftDetails?.giftName ?? data.gift?.name ?? "подарок");
     const diamonds = Number(data.giftDetails?.diamondCount ?? data.gift?.diamondCount ?? 0);
