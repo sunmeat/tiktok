@@ -54,6 +54,11 @@ export interface AquaLifeFish {
   lastLikeAtMs: number | null;
   lastHealAtMs: number | null;
   lastGrowthAtMs: number | null;
+  lastHurtAtMs: number | null;
+  lastAttackAtMs: number | null;
+  attackCooldownUntilMs: number;
+  attackAnimationUntilMs: number;
+  lastJellyfishHitAtMs: number | null;
   respawnAtMs: number | null;
   buffs: AquaLifeBuff[];
 }
@@ -114,6 +119,7 @@ export interface FishRenderModel {
   maxHp: number | null;
   status: FishStatus;
   rewardFeedback: "activity" | "heal" | "growth" | null;
+  combatFeedback: "attack" | "hurt" | null;
 }
 
 export interface AquaLifeRenderSnapshot {
