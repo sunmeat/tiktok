@@ -102,6 +102,11 @@ export function processGameEvent(
     participant.isFollowing = true;
     participant.isActive = true;
     ensureFish(state, participant, config).isAiControlled = false;
+  } else if (event.type === "subscribe") {
+    participant.subscribed = true;
+    const fish = ensureFish(state, participant, config);
+    if (participant.unlockedSpecies.length === 0) fish.species = "dory";
+    fish.isAiControlled = false;
   } else if (event.type === "gift") {
     participant.isActive = true;
     ensureFish(state, participant, config).isAiControlled = false;
