@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  BoundedEventDeduplicator,
+  BoundedGameEventQueue,
   createAquaLifeState,
   normalizeTikTokEvent,
   processGameEvent
@@ -94,4 +96,53 @@ test("later events refresh nickname and avatar without replacing the fish entity
   assert.equal(state.fish["user-400"].nickname, "New name");
   assert.equal(state.fish["user-400"].avatarUrl, "https://example.test/new.png");
   assert.equal(state.activeParticipantCount, 1);
+});
+
+test("LIKE packets without an explicit positive count are rejected", () => {
+  assert.equal(normalizeTikTokEvent("like", { user: { userId: "viewer" } }, 1_000), null);
+  assert.equal(normalizeTikTokEvent("like", { user: { userId: "viewer" }, likeCount: 0 }, 1_000), null);
+  assert.equal(normalizeTikTokEvent("like", { user: { userId: "viewer" }, likeCount: 7 }, 1_000)?.count, 7);
+});
+
+test("gift normalization preserves repeat count, gift ID and validates avatar URL", () => {
+  const event = normalizeTikTokEvent("gift", {
+    msgId: "gift-1",
+    user: { userId: "viewer", profilePictureUrl: "javascript:alert(1)" },
+    repeatCount: 12,
+    giftDetails: { giftId: 5655, giftName: "Rose" }
+  }, 1_000);
+  assert.ok(event);
+  assert.equal(event.type, "gift");
+  assert.equal(event.count, 12);
+  assert.equal(event.giftId, 5655);
+  assert.equal(event.giftName, "Rose");
+  assert.equal(event.avatarUrl, "");
+});
+
+test("bounded event queue drains in batches and prioritizes important events over likes", () => {
+  const queue = new BoundedGameEventQueue(2, 1);
+  const like = normalizeTikTokEvent("like", { user: { userId: "viewer" }, likeCount: 1 }, 1_000);
+  const chat = normalizeTikTokEvent("chat", { user: { userId: "viewer" }, comment: "hi" }, 1_001);
+  const gift = normalizeTikTokEvent("gift", { user: { userId: "viewer" }, giftName: "Rose" }, 1_002);
+  assert.ok(like && chat && gift);
+  assert.equal(queue.enqueue(like).accepted, true);
+  assert.equal(queue.enqueue(chat).accepted, true);
+  assert.equal(queue.enqueue(gift).accepted, true);
+  assert.equal(queue.length, 2);
+  assert.equal(queue.dropped, 1);
+  assert.equal(queue.drainBatch().length, 1);
+  assert.equal(queue.drainBatch().length, 1);
+  assert.equal(queue.length, 0);
+});
+
+test("bounded deduplicator evicts old keys and ignores absent IDs", () => {
+  const cache = new BoundedEventDeduplicator(2);
+  cache.remember("a");
+  cache.remember("b");
+  assert.equal(cache.has("a"), true);
+  cache.remember("c");
+  assert.equal(cache.has("a"), false);
+  assert.equal(cache.has("b"), true);
+  cache.remember(null);
+  assert.equal(cache.size, 2);
 });
