@@ -6,25 +6,26 @@ export interface GiftBoost {
 
 export interface GiftGuideEntry {
   readonly emoji: string;
+  /** Official TikTok LIVE gift artwork hosted on TikTok's webcast CDN. */
+  readonly imageUrl: string;
   /** Display name, also matched (case-insensitively) against the connector's gift name. */
   readonly name: string;
-  readonly coins: number;
   readonly boost: GiftBoost;
-  /** Extra connector gift names (for example the English name) that grant the same boost. */
+  /** Extra connector gift names that grant the same boost. */
   readonly aliases: readonly string[];
 }
 
 /**
- * Owner-confirmed gift boosts. Matching is by gift name because the real TikTok gift IDs have not
- * been verified yet; add verified IDs to GIFT_BOOSTS_BY_ID, which takes precedence over names.
+ * Owner-confirmed gift boosts. Artwork URLs point to the matching TikTok LIVE gift icons.
+ * Matching is by gift name because gift IDs have not yet been verified.
  */
 export const GIFT_GUIDE: readonly GiftGuideEntry[] = Object.freeze([
-  { emoji: "🌹", name: "Rose", coins: 1, boost: { hp: 100, attack: 0 }, aliases: ["Роза"] },
-  { emoji: "💗", name: "Heart Me", coins: 5, boost: { hp: 500, attack: 0 }, aliases: ["heart", "Сердечко"] },
-  { emoji: "🐿️", name: "Squirrel", coins: 10, boost: { hp: 1000, attack: 0 }, aliases: ["Белочка"] },
-  { emoji: "🔥", name: "Fire", coins: 1, boost: { hp: 0, attack: 5 }, aliases: ["Пламенное сердце"] },
-  { emoji: "⚡", name: "Lightning", coins: 5, boost: { hp: 0, attack: 25 }, aliases: ["Бурная реакция"] },
-  { emoji: "👍", name: "Like", coins: 10, boost: { hp: 0, attack: 50 }, aliases: ["Мне нравится"] }
+  { emoji: "🌹", imageUrl: "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp", name: "Rose", boost: { hp: 100, attack: 0 }, aliases: ["Роза"] },
+  { emoji: "🫰", imageUrl: "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp", name: "Finger Heart", boost: { hp: 500, attack: 0 }, aliases: ["Finger heart"] },
+  { emoji: "🐈‍⬛", imageUrl: "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8e779968d715ee8f47b94d5ac6245da5~tplv-obj.webp", name: "Panther", boost: { hp: 1000, attack: 0 }, aliases: [] },
+  { emoji: "❤️‍🔥", imageUrl: "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/b199d028d5beb081fe16edcf77db0830.png~tplv-obj.webp", name: "Flame Heart", boost: { hp: 0, attack: 5 }, aliases: ["Flame heart", "Flaming Heart", "Пламенное сердце"] },
+  { emoji: "🍎", imageUrl: "https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/3940ea39b5180e353c49c5ebe207289c~tplv-obj.webp", name: "Pomegranate", boost: { hp: 0, attack: 25 }, aliases: [] },
+  { emoji: "🐿️", imageUrl: "https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/resource/1739fceef111004d05fb5b8abea8a778.png~tplv-obj.webp", name: "Squirrel", boost: { hp: 0, attack: 50 }, aliases: ["Белочка"] }
 ]);
 
 /** Verified TikTok gift IDs go here (id -> boost). Empty until the IDs are confirmed. */
