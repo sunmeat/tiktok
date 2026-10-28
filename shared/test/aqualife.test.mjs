@@ -1012,3 +1012,20 @@ test("follow status from TikTok join events changes an existing fish between Dor
   processGameEvent(state, joinedNotFollowing);
   assert.equal(state.fish["follow-status-viewer"].species, "standard-gray");
 });
+
+
+test("gift normalization accepts connector snake_case fields used by LIVE gift packets", () => {
+  const event = normalizeTikTokEvent("gift", {
+    msgId: "snake-case-rose",
+    user: { userId: "snake-case-viewer", uniqueId: "rose_viewer" },
+    giftType: 1,
+    giftName: "Rose",
+    diamondCount: 1,
+    gift: { gift_id: 5655, repeat_count: 1, repeat_end: 1, gift_type: 1 }
+  }, 3_000);
+  assert.ok(event);
+  assert.equal(event.giftName, "Rose");
+  assert.equal(event.giftId, 5655);
+  assert.equal(event.count, 1);
+  assert.deepEqual(giftBoostFor(event.giftId, event.giftName), { hp: 100, attack: 0 });
+});
