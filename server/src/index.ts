@@ -316,14 +316,14 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     ingestEvent("subscribe", data);
   });
   onConnectorEvent(WebcastEvent.GIFT, (data: RecordData) => {
-    const giftType = Number(data.giftDetails?.giftType ?? data.gift?.type);
+    const giftType = Number(data.giftType ?? data.giftDetails?.giftType ?? data.gift?.gift_type ?? data.gift?.type);
     // Combo gifts emit intermediate packets. Award only on the connector's final packet.
     if (giftType === 1 && data.repeatEnd === false) return;
     const event = ingestEvent("gift", data);
     if (!event) return;
     const giftDetails = data.giftDetails ?? {};
     const gift = data.gift ?? {};
-    const diamonds = Number(giftDetails.diamondCount ?? gift.diamondCount ?? 0);
+    const diamonds = Number(data.diamondCount ?? giftDetails.diamondCount ?? gift.diamondCount ?? 0);
     const count = event.count ?? 1;
     const alert: GiftAlert = {
       uniqueId: userId(data.user),
