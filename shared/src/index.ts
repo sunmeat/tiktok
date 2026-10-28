@@ -23,6 +23,7 @@ export interface GiftAlert {
   avatarUrl: string;
 }
 export * from "./aqualife/types.js";
+export * from "./aqualife/species.js";
 export * from "./aqualife/config.js";
 export * from "./aqualife/events.js";
 export * from "./aqualife/event-queue.js";
