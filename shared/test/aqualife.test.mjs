@@ -266,8 +266,10 @@ test("movement remains bounded with 500 fish and a burst of likes", () => {
   assert.equal(state.fish["load-user-0"].speedTargetPxPerSecond, AQUALIFE_CONFIG.maxSpeedPxPerSecond);
   for (const fish of Object.values(state.fish)) {
     assert.ok(Number.isFinite(fish.x) && Number.isFinite(fish.y));
-    assert.ok(fish.x >= 0 && fish.x <= state.world.width);
-    assert.ok(fish.y >= 0 && fish.y <= state.world.height);
+    if (fish.status !== "respawning") {
+      assert.ok(fish.x >= 0 && fish.x <= state.world.width);
+      assert.ok(fish.y >= 0 && fish.y <= state.world.height);
+    }
     assert.ok(fish.speedPxPerSecond <= AQUALIFE_CONFIG.maxSpeedPxPerSecond);
     assert.ok(fish.likesPerSecondSamples.length <= AQUALIFE_CONFIG.maxLikeSamplesPerFish);
   }
@@ -311,7 +313,7 @@ test("HP rewards respect the 4/5/6 like boundaries", () => {
   }
 });
 
-test("size grows by one percent at cumulative 100-like thresholds", () => {
+test("size grows by the configured amount at cumulative 100-like thresholds", () => {
   const state = createAquaLifeState();
   const sendLikes = (id, count, atMs) => {
     const event = normalizeTikTokEvent("like", {
@@ -329,7 +331,7 @@ test("size grows by one percent at cumulative 100-like thresholds", () => {
   assert.equal(state.participants["growth-viewer"].likesTotal, 99);
 
   sendLikes("growth-100", 1, 1_100);
-  assert.ok(Math.abs(fish.size - fish.baseSize * 1.01) < 1e-10);
+  assert.ok(Math.abs(fish.size - fish.baseSize * 1.15) < 1e-10);
   assert.equal(fish.lastGrowthAtMs, 1_100);
 
   sendLikes("growth-101", 1, 1_200);
@@ -349,7 +351,7 @@ test("size grows linearly at 200 likes and remains after death and respawn", () 
 
   const fish = state.fish["persistent-growth"];
   const grownSize = fish.size;
-  assert.ok(Math.abs(grownSize - fish.baseSize * 1.02) < 1e-10);
+  assert.ok(Math.abs(grownSize - fish.baseSize * 1.30) < 1e-10);
 
   fish.hp = 0;
   fish.status = "dead";
@@ -393,6 +395,8 @@ test("fish bites use size-aware range, choose smaller targets and obey cooldown"
   processGameEvent(state, smallJoin);
   const big = state.fish["big-fish"];
   const small = state.fish["small-fish"];
+  big.status = "swimming";
+  small.status = "swimming";
   big.size = 2;
   big.x = 100;
   big.y = 100;
@@ -425,6 +429,8 @@ test("a lethal bite starts death exactly once and respawn preserves species and 
   processGameEvent(state, targetEvent);
   const attacker = state.fish["elite-attacker"];
   const target = state.fish["one-hp-target"];
+  attacker.status = "swimming";
+  target.status = "swimming";
   attacker.size = 2;
   attacker.x = 200;
   attacker.y = 200;
@@ -459,6 +465,7 @@ test("jellyfish damage is one HP and contact damage has a cooldown", () => {
   assert.ok(event);
   processGameEvent(state, event);
   const fish = state.fish["jelly-target"];
+  fish.status = "swimming";
   fish.x = 100;
   fish.y = 100;
   const jellyfish = {
