@@ -10,7 +10,6 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
   const [gift, setGift] = useState<GiftAlert | null>(null);
-  const [serverOnline, setServerOnline] = useState(false);
   const [tiktokOnline, setTiktokOnline] = useState(false);
   const [username, setUsername] = useState("playing_in.chat");
   const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
@@ -41,12 +40,11 @@ function Arena() {
         : (import.meta.env.VITE_WS_URL as string | undefined) ||
           `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
       socket = new WebSocket(url);
-      socket.onopen = () => { setServerOnline(true); delay = 1000; };
+      socket.onopen = () => { delay = 1000; };
       socket.onmessage = event => {
         try { handler.current(JSON.parse(event.data) as ServerMessage); } catch {}
       };
       socket.onclose = () => {
-        setServerOnline(false);
         if (!disposed) { timer = window.setTimeout(connect, delay); delay = Math.min(15000, delay * 2); }
       };
       socket.onerror = () => socket?.close();
