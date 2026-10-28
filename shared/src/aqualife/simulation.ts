@@ -284,9 +284,9 @@ export function stepAquaLife(
       else {
         fish.directionX = dx / (distance || 1);
         fish.directionY = dy / (distance || 1);
-        // Respawn travel must not depend on like activity: otherwise an idle fish
-        // can crawl a fraction of a pixel per frame and appear frozen at center.
-        const respawnSpeed = Math.max(120, fish.baseSpeedPxPerSecond + fish.speedPxPerSecond);
+        // Fish drift in from beyond the edge at a calm, steady pace.
+        // Like activity only changes their swimming speed after they enter the aquarium.
+        const respawnSpeed = 28;
         const travel = Math.min(distance, respawnSpeed * boundedDelta / 1000);
         fish.x += fish.directionX * travel;
         fish.y += fish.directionY * travel;
