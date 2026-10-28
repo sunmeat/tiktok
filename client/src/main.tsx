@@ -10,7 +10,6 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
   const [gift, setGift] = useState<GiftAlert | null>(null);
-  const [tiktokOnline, setTiktokOnline] = useState(false);
   const [username, setUsername] = useState("playing_in.chat");
   const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
@@ -22,7 +21,6 @@ function Arena() {
       if (aquaEventsRef.current.length > 2000) aquaEventsRef.current.splice(0, aquaEventsRef.current.length - 2000);
     }
     if (message.type === "connection_status") {
-      setTiktokOnline(message.data.connected);
       setUsername(message.data.username);
     }
   };
@@ -87,9 +85,6 @@ function Arena() {
   </main>;
 }
 
-function Status({online, onlineText, offlineText}: {online:boolean;onlineText:string;offlineText:string}) {
-  return <span className={`status ${online ? "online" : "offline"}`}><i />{online ? onlineText : offlineText}</span>;
-}
 function Avatar({src,className}:{src:string;className:string}) {
   return <img className={className} src={src || fallback} alt="" onError={event => {event.currentTarget.onerror=null;event.currentTarget.src=fallback;}} />;
 }
