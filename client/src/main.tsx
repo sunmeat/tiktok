@@ -70,7 +70,7 @@ function Arena() {
       </aside>
     </section>
     <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
-      <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
+      <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong><span className="online-count"><i />{players.length.toLocaleString("en-US")} ONLINE</span></header>
       <div className="rank-caption">@{username}</div>
       <div className="players-list">
         {!ranked.length && <div className="empty">Waiting for viewers…</div>}
@@ -78,7 +78,7 @@ function Arena() {
           <div className="rank">{String(index+1).padStart(2,"0")}</div>
           <Avatar src={player.profilePictureUrl} className="player-avatar" />
           <div className="player-main">
-            <span className="player-name" title={player.nickname}>{player.nickname}</span>
+            <div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "NOT FOLLOWING"}</span></div>
             <div className="stats"><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b></span><span>♥ <b>{player.likes.toLocaleString("en-US")}</b></span></div>
           </div>
         </article>)}
