@@ -9,7 +9,6 @@
     "client"
   ],
   "scripts": {
-    "predev": "npm run build --workspace @tiktok-arena/shared",
     "predev:server": "npm run build --workspace @tiktok-arena/shared",
     "predev:client": "npm run build --workspace @tiktok-arena/shared",
     "dev": "concurrently -k -n SERVER,CLIENT \"npm run dev:server\" \"npm run dev:client\",
