@@ -19,6 +19,7 @@ interface FishView {
   lastSpecies: FishSpeciesId;
   /** Last damageSeq already shown, so each bite spawns exactly one floating number. */
   lastDamageSeq: number;
+  lastAttackDamage: number;
   /** Where the tail joins the body, in unscaled species units. */
   tailJointX: number;
   tailPhase: number;
@@ -49,6 +50,7 @@ interface DamageNumber {
   startX: number;
   startY: number;
   drift: number;
+  kind: "damage" | "attack";
 }
 /** Largest nose-up/nose-down tilt; steeper headings keep this tilt instead of flipping the fish. */
 const MAX_PITCH = 1.3;
@@ -76,6 +78,13 @@ export class AquaLifePixiAdapter {
     fontSize: 15,
     fontWeight: "900",
     stroke: { color: "#2a0606", width: 3 }
+  });
+  private readonly attackStyle = new TextStyle({
+    fill: "#ff9a7a",
+    fontFamily: "Arial",
+    fontSize: 15,
+    fontWeight: "900",
+    stroke: { color: "#321009", width: 3 }
   });
   private readonly fishViews = new Map<string, FishView>();
   private readonly jellyfishViews = new Map<string, JellyfishView>();
@@ -121,6 +130,11 @@ export class AquaLifePixiAdapter {
         view.lastDamageSeq = fish.damageSeq;
         this.spawnDamageNumber(fish.lastDamage, fish.x, fish.y - 18 * Math.max(0.2, fish.size), fish.damageSeq);
       }
+      if (fish.attackDamage > view.lastAttackDamage) {
+        const attackIncrease = fish.attackDamage - view.lastAttackDamage;
+        this.spawnDamageNumber(attackIncrease, fish.x, fish.y - 30 * Math.max(0.2, fish.size), fish.attackDamage, "attack");
+      }
+      view.lastAttackDamage = fish.attackDamage;
       if (view.lastSpecies !== fish.species) {
         this.drawFishBody(view.body, fish.species);
         this.drawFishTail(view.tail, fish.species);
@@ -202,21 +216,23 @@ export class AquaLifePixiAdapter {
     this.root.destroy({ children: true });
   }
 
-  private spawnDamageNumber(amount: number, x: number, y: number, seq: number): void {
+  private spawnDamageNumber(amount: number, x: number, y: number, seq: number, kind: "damage" | "attack" = "damage"): void {
     let entry = this.damageNumbers.find(item => !item.active);
     if (!entry) {
       if (this.damageNumbers.length < MAX_DAMAGE_NUMBERS) {
-        const text = new Text({ text: "", style: this.damageStyle });
+        const text = new Text({ text: "", style: kind === "attack" ? this.attackStyle : this.damageStyle });
         text.anchor.set(0.5);
         this.damageLayer.addChild(text);
-        entry = { text, age: 0, active: false, startX: 0, startY: 0, drift: 0 };
+        entry = { text, age: 0, active: false, startX: 0, startY: 0, drift: 0, kind };
         this.damageNumbers.push(entry);
       } else {
         // Overflow policy: reuse the number that has been on screen the longest.
         entry = this.damageNumbers.reduce((oldest, item) => (item.age > oldest.age ? item : oldest));
       }
     }
-    entry.text.text = `-${Math.max(1, Math.round(amount))}`;
+    entry.kind = kind;
+    entry.text.style = kind === "attack" ? this.attackStyle : this.damageStyle;
+    entry.text.text = kind === "attack" ? `+${Math.max(1, Math.round(amount))} ATK` : `-${Math.max(1, Math.round(amount))}`;
     entry.age = 0;
     entry.active = true;
     entry.startX = x;
@@ -266,7 +282,8 @@ export class AquaLifePixiAdapter {
 
     const bodyScale = Math.max(0.2, fish.size);
     const combatScale = fish.combatFeedback === "attack" ? 1.16 : fish.combatFeedback === "hurt" ? 0.86 : 1;
-    const bs = bodyScale * combatScale;
+    const giftAttackScale = fish.attackDamage > fish.baseAttackDamage ? 1.04 : 1;
+    const bs = bodyScale * combatScale * giftAttackScale;
 
     const effort = clamp(fish.strokePulse, 0, 1);
     const hovering = fish.hovering;
@@ -386,6 +403,7 @@ export class AquaLifePixiAdapter {
       lastCombatFeedback: null,
       lastSpecies: fish.species,
       lastDamageSeq: 0,
+      lastAttackDamage: fish.baseAttackDamage,
       tailJointX: -getFishSpeciesDefinition(fish.species).bodyLength * 0.66,
       tailPhase: Math.random() * TWO_PI,
       swayPhase: Math.random() * TWO_PI,
