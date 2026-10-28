@@ -31,13 +31,23 @@ export const GIFT_GUIDE: readonly GiftGuideEntry[] = Object.freeze([
 /** Verified TikTok gift IDs go here (id -> boost). Empty until the IDs are confirmed. */
 export const GIFT_BOOSTS_BY_ID: Readonly<Record<number, GiftBoost>> = Object.freeze({});
 
+function normalizeGiftName(name: string): string {
+  return name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+}
+
 const BOOSTS_BY_NAME: ReadonlyMap<string, GiftBoost> = new Map(
-  GIFT_GUIDE.flatMap(entry => [entry.name, ...entry.aliases].map(name => [name.trim().toLowerCase(), entry.boost] as const))
+  GIFT_GUIDE.flatMap(entry => [entry.name, ...entry.aliases].map(name => [normalizeGiftName(name), entry.boost] as const))
 );
 
-/** Returns the confirmed boost for a gift, or null for gifts without a specific rule. */
+/** Returns a configured boost even when the connector appends emoji or gift metadata to its display name. */
 export function giftBoostFor(giftId: number | undefined, giftName: string | undefined): GiftBoost | null {
   if (giftId !== undefined && Number.isSafeInteger(giftId) && GIFT_BOOSTS_BY_ID[giftId]) return GIFT_BOOSTS_BY_ID[giftId];
-  const key = giftName?.trim().toLowerCase();
-  return key ? BOOSTS_BY_NAME.get(key) ?? null : null;
+  const key = normalizeGiftName(giftName ?? "");
+  if (!key) return null;
+  const exact = BOOSTS_BY_NAME.get(key);
+  if (exact) return exact;
+  for (const [knownName, boost] of BOOSTS_BY_NAME) {
+    if (key.startsWith(knownName) || knownName.startsWith(key)) return boost;
+  }
+  return null;
 }
