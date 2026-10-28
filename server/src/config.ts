@@ -1,2 +1,2 @@
-// Ник стримера, к чьему эфиру подключаться. Можно указать свой или чужой ник.
-export const STREAMER_USERNAME = "alex.stream.games";
+// Ник стримера, к чьему эфиру подключаться. Указывай username без @.
+export const STREAMER_USERNAME = "putevoy_tyt";
