@@ -1,6 +1,6 @@
 import { AQUALIFE_CONFIG, type AquaLifeConfig } from "./config.js";
 import { updateFishMovement, type RandomSource } from "./ai.js";
-import { respawnFish } from "./combat.js";
+import { resolveFishBite, resolveJellyfishCollision, respawnFish } from "./combat.js";
 import { applyLikeReward, updateLikeActivitySpeed } from "./rewards.js";
 import type {
   AquaLifeFish,
@@ -107,6 +107,11 @@ export function createFishForParticipant(
     lastLikeAtMs: null,
     lastHealAtMs: null,
     lastGrowthAtMs: null,
+    lastHurtAtMs: null,
+    lastAttackAtMs: null,
+    attackCooldownUntilMs: state.nowMs,
+    attackAnimationUntilMs: 0,
+    lastJellyfishHitAtMs: null,
     respawnAtMs: null,
     buffs: []
   };
@@ -235,7 +240,7 @@ export function stepAquaLife(
   for (const fish of allFish) {
     updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
-      if (respawnFish(fish, state.world, state.nowMs)) fish.status = "respawning";
+      respawnFish(fish, state.world, state.nowMs);
       continue;
     }
     if (fish.status === "respawning") {
@@ -254,7 +259,48 @@ export function stepAquaLife(
       continue;
     }
     if (fish.status === "spawning") fish.status = "swimming";
+    if (fish.status === "attacking" && state.nowMs >= fish.attackAnimationUntilMs) fish.status = "swimming";
     updateFishMovement(fish, state.world, boundedDelta / 1000, random, allFish, config);
+  }
+
+  // Each fish chooses its nearest smaller living target. Cooldowns prevent repeat bites each frame.
+  for (const attacker of allFish) {
+    if (attacker.status === "dead" || attacker.status === "respawning" || state.nowMs < attacker.attackCooldownUntilMs) continue;
+    let target: AquaLifeFish | null = null;
+    let targetDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of allFish) {
+      if (candidate.id === attacker.id || candidate.status === "dead" || candidate.status === "respawning" || candidate.status === "spawning") continue;
+      if (candidate.size >= attacker.size) continue;
+      const distance = Math.hypot(attacker.x - candidate.x, attacker.y - candidate.y);
+      const range = config.attackRangePerSize * (attacker.size + candidate.size);
+      if (distance <= range && distance < targetDistance) {
+        target = candidate;
+        targetDistance = distance;
+      }
+    }
+    if (target) resolveFishBite(attacker, target, state.nowMs, config);
+  }
+
+  // Jellyfish use the same central simulation tick, reflect at the aquarium edges,
+  // and apply at most one hit per fish during the configured cooldown window.
+  for (const jellyfish of Object.values(state.jellyfish)) {
+    jellyfish.x += jellyfish.directionX * jellyfish.speedPxPerSecond * boundedDelta / 1000;
+    jellyfish.y += jellyfish.directionY * jellyfish.speedPxPerSecond * boundedDelta / 1000;
+    if (jellyfish.x < jellyfish.size) {
+      jellyfish.x = jellyfish.size;
+      jellyfish.directionX = Math.abs(jellyfish.directionX);
+    } else if (jellyfish.x > state.world.width - jellyfish.size) {
+      jellyfish.x = state.world.width - jellyfish.size;
+      jellyfish.directionX = -Math.abs(jellyfish.directionX);
+    }
+    if (jellyfish.y < jellyfish.size) {
+      jellyfish.y = jellyfish.size;
+      jellyfish.directionY = Math.abs(jellyfish.directionY);
+    } else if (jellyfish.y > state.world.height - jellyfish.size) {
+      jellyfish.y = state.world.height - jellyfish.size;
+      jellyfish.directionY = -Math.abs(jellyfish.directionY);
+    }
+    for (const fish of allFish) resolveJellyfishCollision(fish, jellyfish, state.nowMs, config);
   }
   recalculateCounts(state);
 }
@@ -281,6 +327,12 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLife
       hp: fish.hp,
       maxHp: fish.maxHp,
       status: fish.status,
+      combatFeedback:
+        fish.attackAnimationUntilMs > state.nowMs
+          ? "attack"
+          : fish.lastHurtAtMs !== null && state.nowMs - fish.lastHurtAtMs >= 0 && state.nowMs - fish.lastHurtAtMs < 350
+            ? "hurt"
+            : null,
       rewardFeedback:
         fish.lastGrowthAtMs !== null && state.nowMs - fish.lastGrowthAtMs >= 0 && state.nowMs - fish.lastGrowthAtMs < 450
           ? "growth"
