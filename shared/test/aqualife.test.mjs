@@ -636,9 +636,10 @@ test("respawning fish continue moving even when they have no recent likes", () =
   assert.equal(fish.status, "respawning");
   const initialX = fish.x;
   const initialY = fish.y;
+  const entryDirectionX = fish.directionX;
+  const entryDirectionY = fish.directionY;
   stepAquaLife(state, 50, 1_050, () => 0.5);
-  assert.ok(Math.hypot(fish.x - initialX, fish.y - initialY) > 0, "respawning fish should move steadily inward");
-  assert.ok(Math.abs(fish.directionY) < 1, "entry direction should allow varied shallow angles");
-  assert.ok(Math.abs(fish.y - state.world.height / 2) >= Math.abs(initialY - state.world.height / 2) - 2,
-    "entry movement should not deliberately steer toward the tank center");
+  assert.ok((fish.x - initialX) * entryDirectionX > 0, "respawning fish should keep its chosen entry direction");
+  assert.ok(Math.abs((fish.y - initialY) - entryDirectionY * 1.4) < 0.01,
+    "respawning fish should follow its shallow entry angle instead of steering toward the center");
 });
