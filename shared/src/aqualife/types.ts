@@ -34,6 +34,12 @@ export interface AquaLifeFish {
   y: number;
   directionX: number;
   directionY: number;
+  targetDirectionX: number;
+  targetDirectionY: number;
+  wanderTimeRemaining: number;
+  turnRateRadiansPerSecond: number;
+  individualSpeedMultiplier: number;
+  speedTargetPxPerSecond: number;
   baseSpeedPxPerSecond: number;
   speedPxPerSecond: number;
   baseSize: number;
