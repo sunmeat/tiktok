@@ -228,7 +228,8 @@ export function stepAquaLife(
 ): void {
   const boundedDelta = Math.max(0, Math.min(Number.isFinite(deltaMs) ? deltaMs : 0, 250));
   state.nowMs = Number.isFinite(nowMs) && nowMs >= 0 ? nowMs : state.nowMs + boundedDelta;
-  for (const fish of Object.values(state.fish)) {
+  const allFish = Object.values(state.fish);
+  for (const fish of allFish) {
     updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
       if (respawnFish(fish, state.world, state.nowMs)) fish.status = "respawning";
@@ -250,7 +251,7 @@ export function stepAquaLife(
       continue;
     }
     if (fish.status === "spawning") fish.status = "swimming";
-    updateFishMovement(fish, state.world, boundedDelta / 1000, random, Object.values(state.fish), config);
+    updateFishMovement(fish, state.world, boundedDelta / 1000, random, allFish, config);
   }
   recalculateCounts(state);
 }
