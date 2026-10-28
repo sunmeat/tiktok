@@ -5,7 +5,11 @@ import {
   BoundedGameEventQueue,
   AQUALIFE_CONFIG,
   addJellyfish,
+  activateParticipant,
   createAquaLifeState,
+  deactivateParticipant,
+  FISH_SPECIES_CATALOG,
+  getFishSpeciesDefinition,
   createAquaLifeRenderSnapshot,
   normalizeTikTokEvent,
   processGameEvent,
@@ -525,4 +529,64 @@ test("jellyfish are normalized, move in the simulation and remain inside the aqu
     directionX: 0, directionY: 0, speedPxPerSecond: 0, size: 0
   }), true, "updating an existing jellyfish does not consume another slot");
   assert.equal(state.jellyfish["jelly-moving"].speedPxPerSecond, AQUALIFE_CONFIG.jellyfishBaseSpeedPxPerSecond);
+});
+
+
+test("the fish catalog has ten distinct gift species with unique visual parameters", () => {
+  const giftSpecies = FISH_SPECIES_CATALOG.filter(species => species.id.startsWith("gift-"));
+  assert.equal(giftSpecies.length, 10);
+  assert.equal(new Set(giftSpecies.map(species => species.bodyColor)).size, 10);
+  assert.equal(new Set(giftSpecies.map(species => species.finColor)).size, 10);
+  assert.equal(new Set(giftSpecies.map(species => species.pattern)).size >= 5, true);
+  assert.equal(getFishSpeciesDefinition("gift-7").displayName, "Рубиновая");
+});
+
+test("subscription selects Dory unless a gift species has already been unlocked", () => {
+  const state = createAquaLifeState();
+  const join = normalizeTikTokEvent("member", {
+    msgId: "subscription-species-join",
+    user: { userId: "subscription-fish", nickname: "Viewer" }
+  }, 0);
+  const subscribe = normalizeTikTokEvent("subscribe", {
+    msgId: "subscription-species-sub",
+    user: { userId: "subscription-fish", nickname: "Viewer" }
+  }, 1);
+  assert.ok(join && subscribe);
+  processGameEvent(state, join);
+  const fish = state.fish["subscription-fish"];
+  const fishEntityId = fish.id;
+  processGameEvent(state, subscribe);
+  assert.equal(fish.species, "dory");
+  assert.equal(fish.id, fishEntityId);
+
+  state.participants["subscription-fish"].unlockedSpecies.push("gift-7");
+  activateParticipant(state, "subscription-fish");
+  assert.equal(fish.species, "gift-7");
+  assert.equal(fish.id, fishEntityId);
+});
+
+test("deactivated viewer fish is AI-controlled and is removed after its death delay", () => {
+  const state = createAquaLifeState();
+  const join = normalizeTikTokEvent("member", {
+    msgId: "ai-lifecycle-join",
+    user: { userId: "ai-lifecycle-viewer", nickname: "Viewer" }
+  }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["ai-lifecycle-viewer"];
+  const entityId = fish.id;
+
+  assert.equal(deactivateParticipant(state, "ai-lifecycle-viewer"), true);
+  assert.equal(fish.isAiControlled, true);
+  fish.hp = 0;
+  fish.status = "dead";
+  fish.respawnAtMs = 5_000;
+  stepAquaLife(state, 50, 4_999, () => 0.5);
+  assert.equal(state.fish["ai-lifecycle-viewer"].id, entityId);
+  stepAquaLife(state, 50, 5_000, () => 0.5);
+  assert.equal(state.fish["ai-lifecycle-viewer"], undefined);
+  assert.ok(state.participants["ai-lifecycle-viewer"], "participant progression remains available");
+  assert.equal(activateParticipant(state, "ai-lifecycle-viewer"), true);
+  assert.notEqual(state.fish["ai-lifecycle-viewer"].id, entityId);
+  assert.equal(state.fish["ai-lifecycle-viewer"].isAiControlled, false);
 });
