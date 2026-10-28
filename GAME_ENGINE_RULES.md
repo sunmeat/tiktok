@@ -123,3 +123,12 @@ These rules were confirmed by the project owner and should be treated as impleme
 - For re-entry, the recommended behavior is to reclaim an existing living AI-controlled fish instead of creating a duplicate, but this specific rule still needs owner confirmation.
 - The precise size threshold for eating, attack cooldown/target selection, maximum fish size, reset behavior for stats other than appearance, and exact fish-appearance precedence remain open decisions. Do not invent final rules for these.
 
+
+
+## Validated TikTok event ingestion
+
+- Validate connector payloads at the server boundary and convert them to the shared normalized event contract before broadcasting them to AquaLife.
+- Keep the event queue bounded and flush it in batches on one managed timer. Prefer preserving gifts, subscriptions, joins, and other semantically important events over high-volume likes when capacity is exhausted.
+- Deduplicate only when the connector supplies a stable provider event ID. Never use a synthetic timestamp/user key to suppress otherwise legitimate repeated likes.
+- Guard every connector callback with connection identity so late callbacks from a disconnected connection cannot affect the active stream. Keep at most one reconnect timer and redact signing secrets from error messages.
+- Keep diagnostics aggregate-only: do not expose signing keys or raw connector payloads through health endpoints. Participant and expected-fish estimates must not be presented as authoritative living-fish counts while simulation remains client-side.
