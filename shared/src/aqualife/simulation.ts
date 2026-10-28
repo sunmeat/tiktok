@@ -80,9 +80,7 @@ export function processGameEvent(
   event: NormalizedGameEvent,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): void {
-  if (!event.eventId || state.processedEventIds.includes(event.eventId)) return;
-  state.processedEventIds.push(event.eventId);
-  if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();
+  if (event.dedupeKey) {\n    if (state.processedEventIds.includes(event.dedupeKey)) return;\n    state.processedEventIds.push(event.dedupeKey);\n    if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();\n  }
   if (event.type === "viewer-left") {
     const participant = state.participants[event.userId];
     if (participant?.isActive) {
