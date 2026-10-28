@@ -1,6 +1,8 @@
 export interface AquaLifeConfig {
   readonly initialHp: number;
   readonly likesPerHp: number;
+  readonly likesPerSizeGrowth: number;
+  readonly sizeGrowthPerThreshold: number;
   readonly respawnDelayMs: number;
   readonly likeSpeedPxPerSecondPerLikePerSecond: number;
   readonly likeActivityWindowMs: number;
@@ -35,6 +37,8 @@ export interface AquaLifeConfig {
 export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   initialHp: 5,
   likesPerHp: 5,
+  likesPerSizeGrowth: 100,
+  sizeGrowthPerThreshold: 0.01,
   respawnDelayMs: 5_000,
   likeSpeedPxPerSecondPerLikePerSecond: 0.6,
   likeActivityWindowMs: 5_000,
