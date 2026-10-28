@@ -26,11 +26,24 @@ export function applyLikeReward(
   while (fish.likesPerSecondSamples.length && fish.likesPerSecondSamples[0].atMs < cutoff) {
     fish.likesPerSecondSamples.shift();
   }
-  const totalInWindow = fish.likesPerSecondSamples.reduce((sum, sample) => sum + sample.count, 0);
-  const activeMs = Math.max(1, Math.min(config.likeActivityWindowMs, atMs - (fish.likesPerSecondSamples[0]?.atMs ?? atMs) + 1));
-  const likesPerSecond = totalInWindow * 1000 / activeMs;
-  fish.speedPxPerSecond = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
+  updateLikeActivitySpeed(fish, atMs, config);
   // Size growth is intentionally not applied until its gameplay formula is confirmed.
   const sizeMultiplier = fish.size / config.baseFishSize;
   return { hpGained, sizeMultiplier, speedPxPerSecond: fish.speedPxPerSecond };
+}
+
+/** Recalculate a smoothed rate and let it decay when no new likes arrive. */
+export function updateLikeActivitySpeed(
+  fish: AquaLifeFish,
+  nowMs: number,
+  config: AquaLifeConfig = AQUALIFE_CONFIG
+): number {
+  const cutoff = nowMs - config.likeActivityWindowMs;
+  while (fish.likesPerSecondSamples.length && fish.likesPerSecondSamples[0].atMs < cutoff) {
+    fish.likesPerSecondSamples.shift();
+  }
+  const totalInWindow = fish.likesPerSecondSamples.reduce((sum, sample) => sum + sample.count, 0);
+  const likesPerSecond = totalInWindow * 1000 / Math.max(1, config.likeActivityWindowMs);
+  fish.speedPxPerSecond = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
+  return fish.speedPxPerSecond;
 }
