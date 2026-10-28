@@ -78,7 +78,7 @@ export function normalizeTikTokEvent(
 ): NormalizedGameEvent | null {
   if (!Number.isFinite(receivedAtMs) || receivedAtMs < 0) return null;
   const data = record(payload);
-  const user = record(data.user ?? data);
+  const user = record(data.user ?? data.member ?? data.viewer ?? data);
   // Prefer stable provider IDs; a username is only a fallback when no stable ID is exposed.
   const rawUserId = stringValue(
     user.userId, user.id, user.secUid, data.userId, data.secUid, user.uniqueId, user.displayId, data.uniqueId
