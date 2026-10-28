@@ -58,33 +58,110 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
       app = pixi;
       host.appendChild(pixi.canvas);
 
+      // Layered reef environment: deep-water gradient, sun shafts, caustics, rocks,
+      // coral, sea grass and sand ripples. All scenery is static and drawn once.
       const background = new Graphics()
-        .rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
-        .fill({ color: 0x052a43 })
-        .rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT * 0.34)
-        .fill({ color: 0x0a5471, alpha: 0.34 })
-        .ellipse(WORLD_WIDTH * 0.25, WORLD_HEIGHT * 0.12, WORLD_WIDTH * 0.48, WORLD_HEIGHT * 0.18)
-        .fill({ color: 0x3ec8d5, alpha: 0.055 })
-        .ellipse(WORLD_WIDTH * 0.83, WORLD_HEIGHT * 0.55, WORLD_WIDTH * 0.3, WORLD_HEIGHT * 0.28)
-        .fill({ color: 0x1a86a2, alpha: 0.07 })
-        .rect(0, WORLD_HEIGHT - 42, WORLD_WIDTH, 42)
-        .fill({ color: 0xc6a66a, alpha: 0.9 });
-      for (let i = 0; i < 14; i++) {
-        const x = (i / 14) * WORLD_WIDTH + random() * 12;
-        background.ellipse(x, WORLD_HEIGHT - 40 + random() * 8, 9 + random() * 8, 2 + random() * 2)
-          .fill({ color: i % 2 ? 0xf0d49a : 0x8c744e, alpha: 0.48 });
+        .rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill({ color: 0x03253a })
+        .rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT * 0.42).fill({ color: 0x0a5875, alpha: 0.46 })
+        .rect(0, WORLD_HEIGHT * 0.38, WORLD_WIDTH, WORLD_HEIGHT * 0.62).fill({ color: 0x031b30, alpha: 0.42 });
+
+      // Soft shafts of sunlight near the surface.
+      for (let i = 0; i < 7; i++) {
+        const x = 18 + i * 82;
+        background.moveTo(x, 0).lineTo(x + 26 + random() * 18, 0)
+          .lineTo(x + 158 + random() * 24, WORLD_HEIGHT * 0.62)
+          .lineTo(x + 105, WORLD_HEIGHT * 0.62).closePath()
+          .fill({ color: 0x67e5ee, alpha: 0.025 + random() * 0.025 });
       }
-      // Static seabed plants avoid per-frame redraws and keep the decoration budget bounded.
-      for (let i = 0; i < 9; i++) {
-        const x = 10 + i * 64 + random() * 20;
-        const height = 42 + random() * 80;
-        const plant = new Graphics().moveTo(x, WORLD_HEIGHT - 38);
-        for (let j = 1; j <= 5; j++) {
-          plant.lineTo(x + Math.sin(j * 0.65 + i) * (5 + j * 2), WORLD_HEIGHT - 38 - height * j / 5);
+      // Large diffuse caustic pools and depth haze.
+      for (let i = 0; i < 11; i++) {
+        const x = random() * WORLD_WIDTH;
+        const y = 60 + random() * WORLD_HEIGHT * 0.7;
+        background.ellipse(x, y, 24 + random() * 48, 7 + random() * 15)
+          .fill({ color: i % 2 ? 0x45cbd1 : 0x3a9fae, alpha: 0.025 + random() * 0.025 });
+      }
+
+      // A sloping sandy seabed with a dark contact shadow and warm shallow sand.
+      background.moveTo(0, WORLD_HEIGHT - 76)
+        .quadraticCurveTo(WORLD_WIDTH * 0.22, WORLD_HEIGHT - 96, WORLD_WIDTH * 0.48, WORLD_HEIGHT - 72)
+        .quadraticCurveTo(WORLD_WIDTH * 0.78, WORLD_HEIGHT - 42, WORLD_WIDTH, WORLD_HEIGHT - 82)
+        .lineTo(WORLD_WIDTH, WORLD_HEIGHT).lineTo(0, WORLD_HEIGHT).closePath()
+        .fill({ color: 0x8c795d, alpha: 0.28 });
+      background.moveTo(0, WORLD_HEIGHT - 62)
+        .quadraticCurveTo(WORLD_WIDTH * 0.25, WORLD_HEIGHT - 83, WORLD_WIDTH * 0.5, WORLD_HEIGHT - 58)
+        .quadraticCurveTo(WORLD_WIDTH * 0.76, WORLD_HEIGHT - 31, WORLD_WIDTH, WORLD_HEIGHT - 67)
+        .lineTo(WORLD_WIDTH, WORLD_HEIGHT).lineTo(0, WORLD_HEIGHT).closePath()
+        .fill({ color: 0xd0b27a });
+      background.moveTo(0, WORLD_HEIGHT - 59)
+        .quadraticCurveTo(WORLD_WIDTH * 0.25, WORLD_HEIGHT - 80, WORLD_WIDTH * 0.5, WORLD_HEIGHT - 55)
+        .quadraticCurveTo(WORLD_WIDTH * 0.76, WORLD_HEIGHT - 28, WORLD_WIDTH, WORLD_HEIGHT - 64)
+        .stroke({ color: 0xf0dba2, alpha: 0.78, width: 2 });
+
+      // Fine sand ripples, shell fragments and small stones.
+      for (let i = 0; i < 24; i++) {
+        const x = random() * WORLD_WIDTH;
+        const y = WORLD_HEIGHT - 54 + random() * 46;
+        background.moveTo(x, y).quadraticCurveTo(x + 5 + random() * 9, y - 2, x + 13 + random() * 13, y)
+          .stroke({ color: i % 3 === 0 ? 0xf4dfad : 0x79684f, alpha: 0.34 + random() * 0.22, width: 0.7 + random() * 1.2 });
+      }
+      for (let i = 0; i < 13; i++) {
+        const x = random() * WORLD_WIDTH;
+        const y = WORLD_HEIGHT - 44 + random() * 32;
+        background.ellipse(x, y, 2 + random() * 5, 1.5 + random() * 2.8)
+          .fill({ color: i % 2 ? 0xf5e2b3 : 0x665b4e, alpha: 0.65 });
+      }
+
+      // Natural reef rocks in irregular silhouettes.
+      for (const rock of [
+        { x: 18, y: WORLD_HEIGHT - 62, w: 52, h: 27, c: 0x435e61 },
+        { x: 472, y: WORLD_HEIGHT - 65, w: 72, h: 34, c: 0x3d5559 },
+        { x: 112, y: WORLD_HEIGHT - 55, w: 28, h: 15, c: 0x64746a },
+        { x: 376, y: WORLD_HEIGHT - 50, w: 38, h: 20, c: 0x59675f }
+      ]) {
+        background.moveTo(rock.x - rock.w * 0.5, rock.y)
+          .lineTo(rock.x - rock.w * 0.42, rock.y - rock.h * 0.52)
+          .lineTo(rock.x - rock.w * 0.08, rock.y - rock.h)
+          .lineTo(rock.x + rock.w * 0.27, rock.y - rock.h * 0.78)
+          .lineTo(rock.x + rock.w * 0.48, rock.y - rock.h * 0.28)
+          .lineTo(rock.x + rock.w * 0.5, rock.y)
+          .closePath().fill({ color: rock.c })
+          .stroke({ color: 0x9db4a7, alpha: 0.35, width: 1 });
+        background.ellipse(rock.x - rock.w * 0.08, rock.y - rock.h * 0.64, rock.w * 0.13, rock.h * 0.08)
+          .fill({ color: 0xb2c5ac, alpha: 0.26 });
+      }
+
+      // Swaying-looking sea grass silhouettes, plus branching coral fans.
+      for (let i = 0; i < 11; i++) {
+        const x = 8 + i * 51 + random() * 18;
+        const baseY = WORLD_HEIGHT - 58 + random() * 7;
+        const height = 34 + random() * 73;
+        const color = [0x1d8c7b, 0x36b49b, 0x176e70, 0x5cae88][i % 4];
+        for (let blade = -1; blade <= 1; blade++) {
+          const bend = blade * (8 + random() * 6);
+          background.moveTo(x + blade * 3, baseY)
+            .bezierCurveTo(x + bend, baseY - height * 0.25, x + bend * 1.3 + 5, baseY - height * 0.62, x + bend + Math.sin(i + blade) * 6, baseY - height)
+            .stroke({ color, alpha: 0.72, width: 2.2 + random() * 1.7, cap: "round" });
         }
-        plant.stroke({ color: i % 3 === 0 ? 0x4dd4a1 : 0x168b75, width: 4 + (i % 2), cap: "round", join: "round" });
-        background.addChild(plant);
       }
+      for (const coral of [
+        { x: 68, y: WORLD_HEIGHT - 62, h: 49, c: 0xd77a86 },
+        { x: 435, y: WORLD_HEIGHT - 66, h: 62, c: 0xd59c74 },
+        { x: 300, y: WORLD_HEIGHT - 55, h: 30, c: 0xb978c6 }
+      ]) {
+        const g = new Graphics();
+        g.moveTo(coral.x, coral.y).lineTo(coral.x, coral.y - coral.h * 0.48)
+          .lineTo(coral.x - 12, coral.y - coral.h * 0.76)
+          .moveTo(coral.x, coral.y - coral.h * 0.48).lineTo(coral.x + 13, coral.y - coral.h * 0.7)
+          .moveTo(coral.x - 6, coral.y - coral.h * 0.34).lineTo(coral.x - 17, coral.y - coral.h * 0.5)
+          .moveTo(coral.x + 7, coral.y - coral.h * 0.4).lineTo(coral.x + 20, coral.y - coral.h * 0.54)
+          .stroke({ color: coral.c, alpha: 0.92, width: 4, cap: "round", join: "round" });
+        for (const [dx, dy] of [[0, -0.48], [-12, -0.76], [13, -0.7], [-17, -0.5], [20, -0.54]] as const) {
+          g.circle(coral.x + dx, coral.y + coral.h * dy, 3.1).fill({ color: coral.c });
+        }
+        background.addChild(g);
+      }
+
+      // Tiny drifting plankton and bubbles, kept to a fixed count for performance.
       adapter = new AquaLifePixiAdapter(pixi.stage);
       adapter.root.addChildAt(background, 0);
 
