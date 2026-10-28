@@ -32,10 +32,7 @@ export function applyLikeReward(
   const previousGrowthThreshold = Math.floor(previousLikesTotal / config.likesPerSizeGrowth);
   const currentGrowthThreshold = Math.floor(participant.likesTotal / config.likesPerSizeGrowth);
   const grew = currentGrowthThreshold > previousGrowthThreshold;
-  fish.size = fish.baseSize * Math.pow(
-    1 + config.sizeGrowthPerThreshold,
-    currentGrowthThreshold
-  );
+  fish.size = fish.baseSize * (1 + config.sizeGrowthPerThreshold * currentGrowthThreshold);
   if (grew) fish.lastGrowthAtMs = safeAtMs;
   if (safeLikes > 0) fish.lastLikeAtMs = safeAtMs;
 
