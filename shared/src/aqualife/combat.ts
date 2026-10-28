@@ -70,6 +70,8 @@ export function resolveJellyfishCollision(
 
   fish.lastJellyfishHitAtMs = nowMs;
   fish.lastHurtAtMs = nowMs;
+  fish.lastDamageTaken = config.jellyfishDamage;
+  fish.damageSeq += 1;
   fish.hp = Math.max(0, fish.hp - config.jellyfishDamage);
   if (fish.hp <= 0) return killFishOnce(fish, nowMs, config);
   return { hit: true, killed: false, respawnAtMs: null };
