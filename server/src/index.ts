@@ -139,6 +139,9 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
       updatePlayer(id, 0, avatar(data.user), String(data.user?.nickname || id), { isFollowing: true });
     });
   }
+  connection.on(WebcastEvent.SUB_NOTIFY, (data: RecordData) => {
+    publishGameEvent(normalizeTikTokEvent("subscribe", data));
+  });
   connection.on(WebcastEvent.GIFT, (data: RecordData) => {
     const giftType = data.giftDetails?.giftType ?? data.gift?.type;
     const giftName = String(data.giftDetails?.giftName ?? data.gift?.name ?? "подарок");
