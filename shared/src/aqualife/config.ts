@@ -44,7 +44,7 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   initialHp: 5,
   likesPerHp: 5,
   likesPerSizeGrowth: 100,
-  sizeGrowthPerThreshold: 0.08,
+  sizeGrowthPerThreshold: 0.15,
   respawnDelayMs: 5_000,
   likeSpeedPxPerSecondPerLikePerSecond: 0.6,
   likeActivityWindowMs: 5_000,
