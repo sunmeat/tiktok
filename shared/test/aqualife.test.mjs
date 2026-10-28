@@ -146,3 +146,26 @@ test("bounded deduplicator evicts old keys and ignores absent IDs", () => {
   cache.remember(null);
   assert.equal(cache.size, 2);
 });
+
+
+test("queued likes from the same participant are coalesced instead of discarded", () => {
+  const queue = new BoundedGameEventQueue(2, 10);
+  const first = normalizeTikTokEvent("like", {
+    msgId: "like-a",
+    user: { userId: "viewer", nickname: "Viewer" },
+    likeCount: 4
+  }, 1_000);
+  const second = normalizeTikTokEvent("like", {
+    msgId: "like-b",
+    user: { userId: "viewer", nickname: "Viewer" },
+    likeCount: 3
+  }, 1_010);
+  assert.ok(first && second);
+  queue.enqueue(first);
+  queue.enqueue(second);
+  const batch = queue.drainBatch();
+  assert.equal(batch.length, 1);
+  assert.equal(batch[0].count, 7);
+  assert.equal(batch[0].dedupeKey, null);
+  assert.equal(queue.dropped, 0);
+});
