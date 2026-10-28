@@ -139,7 +139,8 @@ const eventFlushTimer = setInterval(() => {
 eventFlushTimer.unref();
 
 function userId(user?: RecordData): string {
-  return String(user?.userId || user?.id || user?.secUid || user?.uniqueId || user?.displayId || "unknown");
+  // Preserve the legacy overlay's public username key; AquaLife uses the stable provider ID separately.
+  return String(user?.uniqueId || user?.displayId || user?.userId || user?.id || "unknown");
 }
 function leaderboard(): ArenaPlayer[] {
   return [...players.values()].sort((a, b) => b.score - a.score);
@@ -230,21 +231,21 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     const event = ingestEvent("chat", data);
     if (!event) return;
     const message: ChatMessage = {
-      uniqueId: event.userId,
+      uniqueId: userId(data.user),
       nickname: event.nickname,
       avatarUrl: event.avatarUrl,
       comment: event.comment ?? "",
       timestamp: event.receivedAtMs
     };
     console.log(`[chat] ${event.nickname}: ${message.comment}`);
-    updatePlayer(event.userId, 5, event.avatarUrl, event.nickname, { comments: 1 });
+    updatePlayer(userId(data.user), 5, event.avatarUrl, event.nickname, { comments: 1 });
     broadcast({ type: "chat_message", data: message });
   });
   onConnectorEvent(WebcastEvent.LIKE, (data: RecordData) => {
     const event = ingestEvent("like", data);
     if (!event) return;
     const count = event.count ?? 0;
-    updatePlayer(event.userId, Math.max(1, Math.floor(count / 10)), event.avatarUrl, event.nickname, { likes: count });
+    updatePlayer(userId(data.user), Math.max(1, Math.floor(count / 10)), event.avatarUrl, event.nickname, { likes: count });
   });
   if (WebcastEvent.FOLLOW) {
     onConnectorEvent(WebcastEvent.FOLLOW, (data: RecordData) => {
@@ -267,13 +268,13 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     const diamonds = Number(giftDetails.diamondCount ?? gift.diamondCount ?? 0);
     const count = event.count ?? 1;
     const alert: GiftAlert = {
-      uniqueId: event.userId,
+      uniqueId: userId(data.user),
       nickname: event.nickname,
       giftName: event.giftName ?? "подарок",
       count,
       avatarUrl: event.avatarUrl
     };
-    updatePlayer(event.userId, Math.max(0, diamonds) * count, event.avatarUrl, event.nickname, { gifts: count });
+    updatePlayer(userId(data.user), Math.max(0, diamonds) * count, event.avatarUrl, event.nickname, { gifts: count });
     broadcast({ type: "gift_alert", data: alert });
     console.log(`[gift] ${event.nickname}: ${alert.giftName} x${count}`);
   });
