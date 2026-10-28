@@ -19,12 +19,12 @@ export interface GiftGuideEntry {
  * been verified yet; add verified IDs to GIFT_BOOSTS_BY_ID, which takes precedence over names.
  */
 export const GIFT_GUIDE: readonly GiftGuideEntry[] = Object.freeze([
-  { emoji: "🌹", name: "Роза", coins: 1, boost: { hp: 100, attack: 0 }, aliases: ["rose"] },
-  { emoji: "💗", name: "Сердечко", coins: 5, boost: { hp: 500, attack: 0 }, aliases: ["heart"] },
-  { emoji: "🐿️", name: "Белочка", coins: 10, boost: { hp: 1000, attack: 0 }, aliases: ["squirrel"] },
-  { emoji: "🔥", name: "Пламенное сердце", coins: 1, boost: { hp: 0, attack: 5 }, aliases: [] },
-  { emoji: "⚡", name: "Бурная реакция", coins: 5, boost: { hp: 0, attack: 25 }, aliases: [] },
-  { emoji: "👍", name: "Мне нравится", coins: 10, boost: { hp: 0, attack: 50 }, aliases: [] }
+  { emoji: "🌹", name: "Rose", coins: 1, boost: { hp: 100, attack: 0 }, aliases: ["Роза"] },
+  { emoji: "💗", name: "Heart Me", coins: 5, boost: { hp: 500, attack: 0 }, aliases: ["heart", "Сердечко"] },
+  { emoji: "🐿️", name: "Squirrel", coins: 10, boost: { hp: 1000, attack: 0 }, aliases: ["Белочка"] },
+  { emoji: "🔥", name: "Fire", coins: 1, boost: { hp: 0, attack: 5 }, aliases: ["Пламенное сердце"] },
+  { emoji: "⚡", name: "Lightning", coins: 5, boost: { hp: 0, attack: 25 }, aliases: ["Бурная реакция"] },
+  { emoji: "👍", name: "Like", coins: 10, boost: { hp: 0, attack: 50 }, aliases: ["Мне нравится"] }
 ]);
 
 /** Verified TikTok gift IDs go here (id -> boost). Empty until the IDs are confirmed. */
