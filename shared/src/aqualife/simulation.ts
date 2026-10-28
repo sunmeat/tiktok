@@ -2,29 +2,48 @@ import { AQUALIFE_CONFIG, type AquaLifeConfig } from "./config.js";
 import { updateFishMovement, type RandomSource } from "./ai.js";
 import { respawnFish } from "./combat.js";
 import { applyLikeReward, updateLikeActivitySpeed } from "./rewards.js";
-import type { AquaLifeFish, AquaLifeGameState, AquaLifeParticipant, NormalizedGameEvent } from "./types.js";
+import type {
+  AquaLifeFish,
+  AquaLifeGameState,
+  AquaLifeJellyfish,
+  AquaLifeParticipant,
+  NormalizedGameEvent
+} from "./types.js";
 
+function safeWorldDimension(value: number, fallback: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.max(1, Math.floor(value)) : fallback;
+}
+
+/** Logical world dimensions never depend on the browser or canvas size. */
 export function createAquaLifeState(
   width = AQUALIFE_CONFIG.defaultWorldWidth,
   height = AQUALIFE_CONFIG.defaultWorldHeight,
   nowMs = 0
 ): AquaLifeGameState {
   return {
-    world: { width, height },
-    participants: {},
-    fish: {},
-    jellyfish: {},
+    world: {
+      width: safeWorldDimension(width, AQUALIFE_CONFIG.defaultWorldWidth),
+      height: safeWorldDimension(height, AQUALIFE_CONFIG.defaultWorldHeight)
+    },
+    participants: Object.create(null) as Record<string, AquaLifeParticipant>,
+    fish: Object.create(null) as Record<string, AquaLifeFish>,
+    jellyfish: Object.create(null) as Record<string, AquaLifeJellyfish>,
     activeParticipantCount: 0,
     livingFishCount: 0,
     nextEntityNumber: 1,
     processedEventIds: [],
-    nowMs
+    nowMs: Number.isFinite(nowMs) && nowMs >= 0 ? nowMs : 0
   };
 }
 
-function ensureParticipant(state: AquaLifeGameState, event: NormalizedGameEvent): AquaLifeParticipant {
+function ensureParticipant(
+  state: AquaLifeGameState,
+  event: NormalizedGameEvent,
+  config: AquaLifeConfig
+): AquaLifeParticipant | null {
   let participant = state.participants[event.userId];
   if (!participant) {
+    if (Object.keys(state.participants).length >= config.maxParticipants) return null;
     participant = {
       userId: event.userId,
       nickname: event.nickname || event.userId,
@@ -43,7 +62,12 @@ function ensureParticipant(state: AquaLifeGameState, event: NormalizedGameEvent)
   return participant;
 }
 
-function ensureFish(state: AquaLifeGameState, participant: AquaLifeParticipant, config: AquaLifeConfig): AquaLifeFish {
+/** Creates at most one fish per participant and never exceeds maxFish. */
+export function createFishForParticipant(
+  state: AquaLifeGameState,
+  participant: AquaLifeParticipant,
+  config: AquaLifeConfig = AQUALIFE_CONFIG
+): AquaLifeFish | null {
   const existing = state.fish[participant.userId];
   if (existing) {
     existing.isAiControlled = !participant.isActive;
@@ -51,6 +75,7 @@ function ensureFish(state: AquaLifeGameState, participant: AquaLifeParticipant, 
     existing.avatarUrl = participant.avatarUrl;
     return existing;
   }
+  if (Object.keys(state.fish).length >= config.maxFish) return null;
   const fish: AquaLifeFish = {
     id: `fish-${state.nextEntityNumber++}`,
     participantId: participant.userId,
@@ -79,6 +104,66 @@ function ensureFish(state: AquaLifeGameState, participant: AquaLifeParticipant, 
   return fish;
 }
 
+/** Reactivates an existing participant without replacing their fish entity. */
+export function activateParticipant(state: AquaLifeGameState, userId: string, config: AquaLifeConfig = AQUALIFE_CONFIG): boolean {
+  const participant = state.participants[userId];
+  if (!participant) return false;
+  participant.isActive = true;
+  const fish = createFishForParticipant(state, participant, config);
+  if (fish) fish.isAiControlled = false;
+  recalculateCounts(state);
+  return fish !== null;
+}
+
+/** Keeps the fish alive and switches its behavior to AI control. */
+export function deactivateParticipant(state: AquaLifeGameState, userId: string): boolean {
+  const participant = state.participants[userId];
+  if (!participant) return false;
+  participant.isActive = false;
+  const fish = state.fish[userId];
+  if (fish) fish.isAiControlled = true;
+  recalculateCounts(state);
+  return true;
+}
+
+/** Permanently removes a fish entity; does not silently delete participant history. */
+export function removeFish(state: AquaLifeGameState, fishId: string): boolean {
+  const entry = Object.entries(state.fish).find(([, fish]) => fish.id === fishId);
+  if (!entry) return false;
+  delete state.fish[entry[0]];
+  recalculateCounts(state);
+  return true;
+}
+
+/** Permanently removes a participant and their fish. */
+export function removeParticipant(state: AquaLifeGameState, userId: string): boolean {
+  if (!state.participants[userId]) return false;
+  delete state.participants[userId];
+  delete state.fish[userId];
+  recalculateCounts(state);
+  return true;
+}
+
+export function addJellyfish(
+  state: AquaLifeGameState,
+  jellyfish: AquaLifeJellyfish,
+  config: AquaLifeConfig = AQUALIFE_CONFIG
+): boolean {
+  if (state.jellyfish[jellyfish.id]) {
+    state.jellyfish[jellyfish.id] = jellyfish;
+    return true;
+  }
+  if (Object.keys(state.jellyfish).length >= config.maxJellyfish) return false;
+  state.jellyfish[jellyfish.id] = jellyfish;
+  return true;
+}
+
+export function removeJellyfish(state: AquaLifeGameState, jellyfishId: string): boolean {
+  if (!state.jellyfish[jellyfishId]) return false;
+  delete state.jellyfish[jellyfishId];
+  return true;
+}
+
 export function processGameEvent(
   state: AquaLifeGameState,
   event: NormalizedGameEvent,
@@ -87,43 +172,42 @@ export function processGameEvent(
   if (event.dedupeKey) {
     if (state.processedEventIds.includes(event.dedupeKey)) return;
     state.processedEventIds.push(event.dedupeKey);
-    if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();
+    if (state.processedEventIds.length > config.maxProcessedEventIds) state.processedEventIds.shift();
   }
   if (event.type === "viewer-left") {
-    const participant = state.participants[event.userId];
-    if (participant?.isActive) {
-      participant.isActive = false;
-      const fish = state.fish[event.userId];
-      if (fish) fish.isAiControlled = true;
-    }
-    recalculateCounts(state);
+    deactivateParticipant(state, event.userId);
     return;
   }
-  const participant = ensureParticipant(state, event);
+  const participant = ensureParticipant(state, event, config);
+  if (!participant) return;
   if (event.type === "viewer-joined") {
     participant.isActive = true;
-    ensureFish(state, participant, config).isAiControlled = false;
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) fish.isAiControlled = false;
   } else if (event.type === "like") {
     participant.isActive = true;
-    const fish = ensureFish(state, participant, config);
-    applyLikeReward(participant, fish, event.count ?? 1, event.receivedAtMs, config);
-    fish.isAiControlled = false;
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) {
+      applyLikeReward(participant, fish, event.count ?? 1, event.receivedAtMs, config);
+      fish.isAiControlled = false;
+    }
   } else if (event.type === "follow") {
     participant.isFollowing = true;
     participant.isActive = true;
-    ensureFish(state, participant, config).isAiControlled = false;
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) fish.isAiControlled = false;
   } else if (event.type === "subscribe") {
     participant.isActive = true;
     participant.subscribed = true;
-    const fish = ensureFish(state, participant, config);
-    if (participant.unlockedSpecies.length === 0) fish.species = "dory";
-    fish.isAiControlled = false;
-  } else if (event.type === "gift") {
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) {
+      if (participant.unlockedSpecies.length === 0) fish.species = "dory";
+      fish.isAiControlled = false;
+    }
+  } else if (event.type === "gift" || event.type === "chat") {
     participant.isActive = true;
-    ensureFish(state, participant, config).isAiControlled = false;
-  } else if (event.type === "chat") {
-    participant.isActive = true;
-    ensureFish(state, participant, config).isAiControlled = false;
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) fish.isAiControlled = false;
   }
   recalculateCounts(state);
 }
@@ -132,14 +216,15 @@ export function stepAquaLife(
   state: AquaLifeGameState,
   deltaMs: number,
   nowMs = state.nowMs + deltaMs,
-  random: RandomSource = Math.random
+  random: RandomSource = Math.random,
+  config: AquaLifeConfig = AQUALIFE_CONFIG
 ): void {
-  const boundedDelta = Math.max(0, Math.min(deltaMs, 250));
-  state.nowMs = nowMs;
+  const boundedDelta = Math.max(0, Math.min(Number.isFinite(deltaMs) ? deltaMs : 0, 250));
+  state.nowMs = Number.isFinite(nowMs) && nowMs >= 0 ? nowMs : state.nowMs + boundedDelta;
   for (const fish of Object.values(state.fish)) {
-    updateLikeActivitySpeed(fish, nowMs);
+    updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
-      if (respawnFish(fish, state.world, nowMs)) fish.status = "respawning";
+      if (respawnFish(fish, state.world, state.nowMs, config)) fish.status = "respawning";
       continue;
     }
     if (fish.status === "respawning") {
