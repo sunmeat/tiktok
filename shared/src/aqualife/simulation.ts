@@ -296,7 +296,7 @@ export function stepAquaLife(
       if (!state.participants[fish.participantId]?.isActive) {
         if (fish.respawnAtMs !== null && state.nowMs >= fish.respawnAtMs) removeFish(state, fish.id);
       } else {
-        respawnFish(fish, state.world, state.nowMs);
+        respawnFish(fish, state.world, state.nowMs, config);
       }
       continue;
     }
