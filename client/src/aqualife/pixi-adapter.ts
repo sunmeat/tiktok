@@ -101,7 +101,7 @@ export class AquaLifePixiAdapter {
         view.lastFeedback = fish.rewardFeedback;
         view.lastCombatFeedback = fish.combatFeedback;
       }
-      view.root.alpha = fish.status === "dead" ? 0 : 1;
+      view.root.alpha = fish.status === "dead" ? 0 : fish.alpha;
     }
 
     for (const [id, view] of this.fishViews) {
