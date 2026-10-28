@@ -53,33 +53,33 @@ function Arena() {
     return () => { disposed = true; window.clearTimeout(timer); socket?.close(); };
   }, []);
 
-  const ranked = useMemo(() => [...players].sort((a, b) => b.score - a.score).slice(0, 10), [players]);
+  const ranked = useMemo(() => [...players].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes).slice(0, 8), [players]);
 
   return <main className="arena">
     <PixiEffects gift={gift} />
-    <section className="panel aquarium-panel">
-      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 01</div><h2>LIVE AQUARIUM</h2></div></header>
+    <section className="aquarium-panel" aria-label="AquaLife underwater scene">
       <AquaLifeScene eventsRef={aquaEventsRef} />
-      <aside className="aquarium-guide" aria-label="How to play">
+      <aside className="aquarium-guide overlay-panel" aria-label="How to play">
         <div className="guide-title">HOW TO PLAY</div>
         <ul>
-          <li><b>More likes</b><span>Faster fish</span></li>
-          <li><b>Every 5 likes</b><span>+1 HP</span></li>
-          <li><b>Every 100 likes</b><span>Fish grows</span></li>
-          <li><b>Gifts</b><span>Stronger attacks</span></li>
-          <li><b>Likes or gifts</b><span>More health</span></li>
+          <li><b>Likes</b><span>Swim faster</span></li>
+          <li><b>5 likes</b><span>+1 HP</span></li>
+          <li><b>100 likes</b><span>Grow 1%</span></li>
+          <li><b>Gifts</b><span>More power</span></li>
         </ul>
       </aside>
     </section>
-    <aside className="panel leaderboard">
-      <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 02</div><h2>🏆 LIVE LEADERBOARD</h2><div className="rank-caption">@{username} · viewer activity</div></div><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
+    <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
+      <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
+      <div className="rank-caption">@{username}</div>
       <div className="players-list">
-        {!ranked.length && <div className="empty">Waiting for the first viewers…</div>}
+        {!ranked.length && <div className="empty">Waiting for viewers…</div>}
         {ranked.map((player,index) => <article className={`player-card rank-${index+1}`} key={player.uniqueId}>
-          <div className="rank">{String(index+1).padStart(2,"0")}</div><Avatar src={player.profilePictureUrl} className="player-avatar" />
-          <div className="player-main"><div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "NOT FOLLOWING"}</span></div>
-            <div className="player-score">✦ {player.score.toLocaleString("en-US")} points</div>
-            <div className="stats"><span>♥ <b>{player.likes.toLocaleString("en-US")}</b> likes</span><span>▤ <b>{player.comments.toLocaleString("en-US")}</b> comments</span><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b> gifts</span></div>
+          <div className="rank">{String(index+1).padStart(2,"0")}</div>
+          <Avatar src={player.profilePictureUrl} className="player-avatar" />
+          <div className="player-main">
+            <span className="player-name" title={player.nickname}>{player.nickname}</span>
+            <div className="stats"><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b></span><span>♥ <b>{player.likes.toLocaleString("en-US")}</b></span></div>
           </div>
         </article>)}
       </div>
