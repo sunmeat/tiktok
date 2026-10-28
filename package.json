@@ -16,7 +16,7 @@
     "dev:client": "npm run dev --workspace @tiktok-arena/client",
     "build": "npm run build --workspace @tiktok-arena/shared && npm run build --workspace @tiktok-arena/server && npm run build --workspace @tiktok-arena/client",
     "start": "npm run start --workspace @tiktok-arena/server",
-    "typecheck": "npm run typecheck --workspace @tiktok-arena/shared && npm run typecheck --workspace @tiktok-arena/server && npm run typecheck --workspace @tiktok-arena/client"
+    "typecheck": "npm run build --workspace @tiktok-arena/shared && npm run typecheck --workspace @tiktok-arena/shared && npm run typecheck --workspace @tiktok-arena/server && npm run typecheck --workspace @tiktok-arena/client"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
