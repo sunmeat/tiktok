@@ -190,8 +190,13 @@ test("fish use smooth wandering and stay inside the logical aquarium bounds", ()
   assert.ok(join);
   processGameEvent(state, join);
   const fish = state.fish["movement-viewer"];
-  fish.x = 4;
-  fish.y = 4;
+  fish.status = "swimming";
+  fish.x = 24;
+  fish.y = 24;
+  fish.directionX = 1;
+  fish.directionY = 0;
+  fish.targetDirectionX = 1;
+  fish.targetDirectionY = 0;
   fish.speedPxPerSecond = 120;
 
   let seed = 123456789;
