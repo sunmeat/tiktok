@@ -104,6 +104,9 @@ export function createFishForParticipant(
     attackDamage: config.baseBiteDamage,
     isAiControlled: !participant.isActive,
     likesPerSecondSamples: [],
+    lastLikeAtMs: null,
+    lastHealAtMs: null,
+    lastGrowthAtMs: null,
     respawnAtMs: null,
     buffs: []
   };
@@ -277,10 +280,19 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLife
       size: fish.size,
       hp: fish.hp,
       maxHp: fish.maxHp,
-      status: fish.status
+      status: fish.status,
+      rewardFeedback:
+        fish.lastGrowthAtMs !== null && state.nowMs - fish.lastGrowthAtMs >= 0 && state.nowMs - fish.lastGrowthAtMs < 450
+          ? "growth"
+          : fish.lastHealAtMs !== null && state.nowMs - fish.lastHealAtMs >= 0 && state.nowMs - fish.lastHealAtMs < 450
+            ? "heal"
+            : fish.lastLikeAtMs !== null && state.nowMs - fish.lastLikeAtMs >= 0 && state.nowMs - fish.lastLikeAtMs < 250
+              ? "activity"
+              : null
     })),
     jellyfish: Object.values(state.jellyfish).map(jellyfish => ({ ...jellyfish })),
     activeParticipantCount: state.activeParticipantCount,
-    livingFishCount: state.livingFishCount
+    livingFishCount: state.livingFishCount,
+    nowMs: state.nowMs
   };
 }
