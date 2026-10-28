@@ -12,7 +12,8 @@ import {
   AQUALIFE_CONFIG,
   BoundedEventDeduplicator,
   BoundedGameEventQueue,
-  normalizeTikTokEvent
+  normalizeTikTokEvent,
+  giftBoostFor
 } from "@tiktok-arena/shared";
 import type { NormalizedGameEventType } from "@tiktok-arena/shared";
 import { STREAMER_USERNAME } from "./config.js";
@@ -47,6 +48,7 @@ const eventTypeCounts: Record<NormalizedGameEventType, number> = {
   chat: 0
 };
 const trackedParticipants = new Map<string, number>();
+const lastFollowingStatuses = new Map<string, boolean>();
 const maxTrackedParticipants = 10_000;
 const diagnostics = {
   acceptedEvents: 0,
@@ -130,6 +132,17 @@ function ingestEvent(
   diagnostics.acceptedEvents += 1;
   eventTypeCounts[event.type] += 1;
   rememberParticipant(event.userId);
+  if (event.isFollowing !== undefined) {
+    const previousStatus = lastFollowingStatuses.get(event.userId);
+    lastFollowingStatuses.set(event.userId, event.isFollowing);
+    if (previousStatus !== event.isFollowing) {
+      console.log(`[follow-status] ${event.nickname}: ${event.isFollowing ? "FOLLOWING" : "NOT FOLLOWING"} (from ${kind})`);
+    }
+    if (lastFollowingStatuses.size > maxTrackedParticipants) {
+      const oldestStatus = lastFollowingStatuses.keys().next().value as string | undefined;
+      if (oldestStatus !== undefined) lastFollowingStatuses.delete(oldestStatus);
+    }
+  }
 
   const result = eventQueue.enqueue(event);
   diagnostics.queueDrops += result.dropped;
@@ -334,7 +347,11 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     };
     updatePlayer(userId(data.user), Math.max(0, diamonds) * count, event.avatarUrl, event.nickname, { gifts: count });
     broadcast({ type: "gift_alert", data: alert });
-    console.log(`[gift] ${event.nickname}: ${alert.giftName} x${count}`);
+    const boost = giftBoostFor(event.giftId, event.giftName);
+    const boostLabel = boost
+      ? `+${boost.hp * count} HP / +${boost.attack * count} ATK`
+      : `+${count} HP / +${count} ATK (default)`;
+    console.log(`[gift] ${event.nickname}: ${alert.giftName} x${count}; ${boostLabel}; giftType=${giftType}; repeatEnd=${String(data.repeatEnd)}`);
   });
 }
 
