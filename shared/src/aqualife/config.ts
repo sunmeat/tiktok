@@ -49,7 +49,7 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   likeSpeedPxPerSecondPerLikePerSecond: 0.6,
   likeActivityWindowMs: 5_000,
   baseFishSize: 1,
-  baseSpeedPxPerSecond: 0,
+  baseSpeedPxPerSecond: 14,
   minSpeedPxPerSecond: 0,
   maxSpeedPxPerSecond: 120,
   speedSmoothingPerSecond: 2.5,
