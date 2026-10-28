@@ -37,8 +37,11 @@ function Arena() {
     let disposed = false;
     const connect = () => {
       if (disposed) return;
-      const url = (import.meta.env.VITE_WS_URL as string | undefined) ||
-        `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
+      // Local development must always use the local backend, not a stale deployment URL from .env.
+      const url = import.meta.env.DEV
+        ? "ws://127.0.0.1:3000"
+        : (import.meta.env.VITE_WS_URL as string | undefined) ||
+          `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`;
       socket = new WebSocket(url);
       socket.onopen = () => { setServerOnline(true); delay = 1000; };
       socket.onmessage = event => {
