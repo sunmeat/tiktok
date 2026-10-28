@@ -107,6 +107,7 @@ export function processGameEvent(
     participant.isActive = true;
     ensureFish(state, participant, config).isAiControlled = false;
   } else if (event.type === "subscribe") {
+    participant.isActive = true;
     participant.subscribed = true;
     const fish = ensureFish(state, participant, config);
     if (participant.unlockedSpecies.length === 0) fish.species = "dory";
