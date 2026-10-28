@@ -71,7 +71,7 @@ export function createFishForParticipant(
   participant: AquaLifeParticipant,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): AquaLifeFish | null {
-  const preferredSpecies = participant.unlockedSpecies.at(-1) ?? (participant.isFollowing || participant.subscribed ? "dory" : "standard-gray");
+  const preferredSpecies = participant.unlockedSpecies.at(-1) ?? (participant.isFollowing ? "dory" : "standard-gray");
   const existing = state.fish[participant.userId];
   if (existing) {
     existing.isAiControlled = !participant.isActive;
@@ -232,7 +232,7 @@ export function processGameEvent(
   if (event.isFollowing !== undefined) {
     participant.isFollowing = event.isFollowing;
     // Keep the rendered fish in sync immediately, including for an already-present viewer.
-    if (participant.unlockedSpecies.length === 0 && !participant.subscribed) {
+    if (participant.unlockedSpecies.length === 0) {
       const existingFish = state.fish[event.userId];
       if (existingFish) existingFish.species = event.isFollowing ? "dory" : "standard-gray";
     }
@@ -258,7 +258,6 @@ export function processGameEvent(
     participant.subscribed = true;
     const fish = createFishForParticipant(state, participant, config);
     if (fish) {
-      if (participant.unlockedSpecies.length === 0) fish.species = "dory";
       fish.isAiControlled = false;
     }
   } else if (event.type === "gift") {
