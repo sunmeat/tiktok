@@ -28,7 +28,7 @@ export function resolveFishBite(
     attacker.id === target.id ||
     attacker.status === "dead" || attacker.status === "respawning" ||
     target.status === "dead" || target.status === "respawning" ||
-    attacker.size <= target.size ||
+    attacker.size < target.size ||
     nowMs < attacker.attackCooldownUntilMs
   ) return { hit: false, killed: false, respawnAtMs: null };
 
