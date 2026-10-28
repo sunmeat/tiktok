@@ -17,7 +17,7 @@ function Arena() {
   const [gift, setGift] = useState<GiftAlert | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
   const [tiktokOnline, setTiktokOnline] = useState(false);
-  const [username, setUsername] = useState("putevoy_tyt");
+  const [username, setUsername] = useState("playing_in.chat");
   const chatRef = useRef<HTMLDivElement>(null);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
