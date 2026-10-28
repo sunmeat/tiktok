@@ -14,52 +14,103 @@ function stringValue(...values: unknown[]): string {
   return "";
 }
 
-function safeCount(value: unknown, fallback = 1): number {
+function safePositiveCount(value: unknown, fallback: number | null = null): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return fallback;
+  if (typeof value === "string" && !value.trim()) return fallback;
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(1_000_000, Math.floor(parsed));
 }
 
-/** Convert connector-specific payloads into a stable internal event contract. */
+function profileAvatar(user: UnknownRecord): string {
+  const picture = record(user.profilePicture);
+  const avatarThumb = record(user.avatarThumb);
+  const avatarMedium = record(user.avatarMedium);
+  const avatarLarge = record(user.avatarLarge);
+  const candidates: unknown[] = [
+    user.profilePictureUrl,
+    picture.url,
+    picture.urlList,
+    avatarThumb.urlList,
+    avatarMedium.urlList,
+    avatarLarge.urlList
+  ];
+  for (const candidate of candidates) {
+    const values = Array.isArray(candidate) ? candidate : [candidate];
+    for (const value of values) {
+      const url = typeof value === "string" ? value.trim() : "";
+      if (!url) continue;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
+      } catch {
+        // Ignore malformed provider avatar values.
+      }
+    }
+  }
+  return "";
+}
+
+/** Convert connector-specific payloads into a validated internal event contract. */
 export function normalizeTikTokEvent(
   kind: "member" | "like" | "follow" | "subscribe" | "gift" | "chat",
   payload: unknown,
   receivedAtMs = Date.now()
 ): NormalizedGameEvent | null {
+  if (!Number.isFinite(receivedAtMs) || receivedAtMs < 0) return null;
   const data = record(payload);
   const user = record(data.user ?? data);
-  // Prefer provider identifiers that are not display names; usernames are the fallback only.
-  const userId = stringValue(user.userId, user.id, user.secUid, user.uniqueId, user.displayId, data.userId, data.uniqueId);
-  if (!userId || userId.toLowerCase() === "unknown") return null;
-
-  const avatar = record(user.profilePicture);
-  const avatarUrl = stringValue(
-    user.profilePictureUrl,
-    record(avatar.url).url,
-    Array.isArray(avatar.url) ? avatar.url[0] : undefined,
-    record(user.avatarThumb).urlList instanceof Array ? (record(user.avatarThumb).urlList as unknown[])[0] : undefined
+  // Prefer stable provider IDs; a username is only a fallback when no stable ID is exposed.
+  const rawUserId = stringValue(
+    user.userId, user.id, user.secUid, data.userId, data.secUid, user.uniqueId, user.displayId, data.uniqueId
   );
-  const nickname = stringValue(user.nickname, user.uniqueId, userId);
+  if (!rawUserId || rawUserId.toLowerCase() === "unknown" || rawUserId.length > 256) return null;
+
+  const userId = rawUserId;
+  const nickname = stringValue(user.nickname, user.uniqueId, user.displayId, userId).slice(0, 80);
+  const avatarUrl = profileAvatar(user);
   const providerEventId = stringValue(data.msgId, data.messageId, data.eventId);
-  const dedupeKey = providerEventId ? `${kind}:${providerEventId}` : null;
-  // Without a provider ID, keep a unique diagnostic ID but do not pretend it can deduplicate delivery.
+  const dedupeKey = providerEventId && providerEventId.length <= 256 ? `${kind}:${providerEventId}` : null;
+  // Without a provider event ID, do not suppress legitimate repeated likes or gifts.
   const eventId = dedupeKey ?? `untracked:${kind}:${userId}:${receivedAtMs}`;
 
-  if (kind === "member") return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
-  if (kind === "like") {
-    return { type: "like", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, count: safeCount(data.likeCount ?? data.count) };
+  if (kind === "member") {
+    return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
   }
-  if (kind === "follow") return { type: "follow", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
-  if (kind === "subscribe") return { type: "subscribe", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
+  if (kind === "like") {
+    // A LIKE packet without an explicit positive count is malformed; never invent one like.
+    const count = safePositiveCount(data.likeCount ?? data.count);
+    if (count === null) return null;
+    return { type: "like", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, count };
+  }
+  if (kind === "follow") {
+    return { type: "follow", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
+  }
+  if (kind === "subscribe") {
+    return { type: "subscribe", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
+  }
   if (kind === "gift") {
+    const giftDetails = record(data.giftDetails);
+    const gift = record(data.gift);
+    const count = safePositiveCount(data.repeatCount ?? data.giftCount ?? data.count, 1);
+    const rawGiftId = data.giftId ?? giftDetails.giftId ?? gift.id;
+    const parsedGiftId = Number(rawGiftId);
+    const giftId = rawGiftId !== undefined && Number.isFinite(parsedGiftId) && parsedGiftId > 0
+      ? parsedGiftId
+      : undefined;
     return {
-      type: "gift", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs,
-      count: safeCount(data.repeatCount),
-      giftId: Number.isFinite(Number(data.giftId)) ? Number(data.giftId) : undefined,
-      giftName: stringValue(data.giftName, record(data.giftDetails).giftName, record(data.gift).name) || "подарок"
+      type: "gift",
+      eventId,
+      dedupeKey,
+      userId,
+      nickname,
+      avatarUrl,
+      receivedAtMs,
+      count: count ?? 1,
+      giftId,
+      giftName: stringValue(data.giftName, giftDetails.giftName, gift.name).slice(0, 120) || "подарок"
     };
   }
-  return {
-    type: "chat", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs,
-    comment: stringValue(data.comment, data.content)
-  };
+  const comment = stringValue(data.comment, data.content).slice(0, 2_000);
+  return { type: "chat", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, comment };
 }
