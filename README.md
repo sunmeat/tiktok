@@ -28,28 +28,13 @@ The client runs at `http://localhost:5173`; the backend runs at `http://localhos
 
 ## Choosing a test stream
 
-Edit `server/src/config.ts`:
-
-- `USE_MY_STREAM = true`: connect to your own stream, `MY_TIKTOK_USERNAME = "alex.stream.games"`.
-- `USE_MY_STREAM = false`: scan `DISCOVERY_USERNAMES` and select a live stream whose current viewer count is within `TARGET_VIEWERS` through `TARGET_VIEWERS + VIEWER_COUNT_TOLERANCE`.
-- `TARGET_VIEWERS = 10`: change to `50` or `100` when needed.
-- `DISCOVERY_USERNAMES`: add candidate TikTok usernames without the `@` sign.
-- `DISCOVERY_RETRY_MS`: how long to wait before scanning again if no suitable live is found.
-
-Example:
+Edit just one line in `server/src/config.ts`:
 
 ```ts
-export const USE_MY_STREAM = false;
-export const MY_TIKTOK_USERNAME = "alex.stream.games";
-export const TARGET_VIEWERS = 10;
-export const VIEWER_COUNT_TOLERANCE = 5;
-export const DISCOVERY_USERNAMES = [
-  "candidate_one",
-  "candidate_two",
-];
+export const STREAMER_USERNAME = "alex.stream.games";
 ```
 
-The discovery process checks candidates one by one, logs their live status and viewer counts, then connects to the first closest match in the configured range. If no match is found, it retries later. TikTok does not provide a public official endpoint for enumerating every current LIVE, so this implementation searches the configured candidate pool rather than claiming to find every stream on the platform. The connector is unofficial and TikTok may change its internal protocol.
+Put the username of any streamer whose LIVE is currently running. Use the same line for your own stream or someone else's; omit the `@` prefix. The server connects directly to that username and retries if the connection drops. It does not scan for streams or filter by viewer count.
 
 A `SIGN_API_KEY` is required by this project's current server configuration. Set it in the root `.env` file and keep it out of Git.
 
