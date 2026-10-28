@@ -168,13 +168,13 @@ export function addJellyfish(
   if (!state.jellyfish[jellyfish.id] && Object.keys(state.jellyfish).length >= config.maxJellyfish) return false;
   const rawDirectionX = Number.isFinite(jellyfish.directionX) ? jellyfish.directionX : 1;
   const rawDirectionY = Number.isFinite(jellyfish.directionY) ? jellyfish.directionY : 0;
-  const directionLength = Math.hypot(rawDirectionX, rawDirectionY) || 1;
+  const directionLength = Math.hypot(rawDirectionX, rawDirectionY);
   const normalized: AquaLifeJellyfish = {
     ...jellyfish,
     x: Number.isFinite(jellyfish.x) ? Math.max(0, Math.min(state.world.width, jellyfish.x)) : state.world.width / 2,
     y: Number.isFinite(jellyfish.y) ? Math.max(0, Math.min(state.world.height, jellyfish.y)) : state.world.height / 2,
-    directionX: rawDirectionX / directionLength,
-    directionY: rawDirectionY / directionLength,
+    directionX: directionLength > 0.0001 ? rawDirectionX / directionLength : 1,
+    directionY: directionLength > 0.0001 ? rawDirectionY / directionLength : 0,
     speedPxPerSecond: Number.isFinite(jellyfish.speedPxPerSecond) && jellyfish.speedPxPerSecond > 0
       ? Math.min(config.maxSpeedPxPerSecond, jellyfish.speedPxPerSecond)
       : config.jellyfishBaseSpeedPxPerSecond,
