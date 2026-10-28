@@ -122,7 +122,7 @@ async function findCandidateStream(): Promise<string | undefined> {
     return undefined;
   }
 
-  console.log(`[discovery] Looking for a LIVE with about ${TARGET_VIEWERS} viewers (±${VIEWER_COUNT_TOLERANCE}) among ${candidates.length} candidates.`);
+  console.log(`[discovery] Looking for a LIVE with ${TARGET_VIEWERS}-${TARGET_VIEWERS + VIEWER_COUNT_TOLERANCE} viewers among ${candidates.length} candidates.`);
   const matches: Array<{ username: string; viewers: number; distance: number }> = [];
 
   for (const candidate of candidates) {
@@ -138,8 +138,8 @@ async function findCandidateStream(): Promise<string | undefined> {
           console.log(`[discovery] @${candidate}: LIVE, viewer count unavailable`);
         } else {
           console.log(`[discovery] @${candidate}: LIVE, ${viewers} viewers`);
-          const distance = Math.abs(viewers - TARGET_VIEWERS);
-          if (distance <= VIEWER_COUNT_TOLERANCE) matches.push({ username: candidate, viewers, distance });
+          const distance = viewers - TARGET_VIEWERS;
+          if (distance >= 0 && distance <= VIEWER_COUNT_TOLERANCE) matches.push({ username: candidate, viewers, distance });
         }
       }
     } catch (error) {
