@@ -76,7 +76,7 @@ export function updateFishMovement(
   const directionMagnitude = Math.hypot(fish.directionX, fish.directionY) || 1;
   fish.directionX /= directionMagnitude;
   fish.directionY /= directionMagnitude;
-  const speed = Math.max(config.minSpeedPxPerSecond, Math.min(config.maxSpeedPxPerSecond, fish.baseSpeedPxPerSecond + fish.speedPxPerSecond));
+  const speed = Math.max(config.minSpeedPxPerSecond, Math.min(config.maxSpeedPxPerSecond, fish.speedPxPerSecond));
   fish.x += fish.directionX * speed * deltaSeconds;
   fish.y += fish.directionY * speed * deltaSeconds;
 
