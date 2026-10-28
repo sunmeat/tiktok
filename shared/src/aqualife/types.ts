@@ -67,6 +67,7 @@ export interface AquaLifeGameState {
   activeParticipantCount: number;
   livingFishCount: number;
   nextEntityNumber: number;
+  processedEventIds: string[];
   nowMs: number;
 }
 
