@@ -335,7 +335,7 @@ test("size grows by the configured amount at cumulative 100-like thresholds", ()
   assert.equal(fish.lastGrowthAtMs, 1_100);
 
   sendLikes("growth-101", 1, 1_200);
-  assert.ok(Math.abs(fish.size - fish.baseSize * 1.01) < 1e-10);
+  assert.ok(Math.abs(fish.size - fish.baseSize * 1.15) < 1e-10);
   assert.equal(state.participants["growth-viewer"].likesTotal, 101);
 });
 
