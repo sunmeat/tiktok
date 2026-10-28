@@ -87,6 +87,12 @@ export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: num
   fish.targetDirectionX = fish.directionX;
   fish.targetDirectionY = fish.directionY;
   fish.wanderTimeRemaining = 2 + Math.random() * 5;
+  fish.targetX = Number.NaN;
+  fish.targetY = Number.NaN;
+  fish.turnVelocity = 0;
+  fish.currentSpeedPxPerSecond = 0;
+  fish.strokePulse = 0;
+  fish.hoverRemainingSeconds = 0;
   fish.attackCooldownUntilMs = nowMs;
   fish.attackAnimationUntilMs = 0;
   fish.lastHurtAtMs = null;

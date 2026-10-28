@@ -99,6 +99,17 @@ export function createFishForParticipant(
     targetDirectionX: spawnDirectionX,
     targetDirectionY: spawnDirectionY,
     wanderTimeRemaining: 1 + ((state.nextEntityNumber - 1) % 7) * 0.35,
+    targetX: Number.NaN,
+    targetY: Number.NaN,
+    turnVelocity: 0,
+    currentSpeedPxPerSecond: 0,
+    // Deterministic per-fish offsets so a school never strokes or sways in unison.
+    strokeTimerSeconds: 0.3 + ((state.nextEntityNumber - 1) % 5) * 0.15,
+    strokeRhythm: 0.88 + ((state.nextEntityNumber - 1) % 7) * 0.04,
+    strokePulse: 0,
+    hoverRemainingSeconds: 0,
+    noiseTimeSeconds: ((state.nextEntityNumber - 1) % 11) * 3.1,
+    noisePhase: ((state.nextEntityNumber - 1) * 2.399963) % (Math.PI * 2),
     turnRateRadiansPerSecond: Math.min(config.maxTurnRateRadiansPerSecond, 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3),
     speedTargetPxPerSecond: config.baseSpeedPxPerSecond,
     lastSpeedUpdateAtMs: state.nowMs,
@@ -293,6 +304,13 @@ export function stepAquaLife(
       fish.y += fish.directionY * travel;
       const margin = Math.max(12, fish.size * 12);
       fish.y = Math.max(margin, Math.min(state.world.height - margin, fish.y));
+      // Steady, calm entry: constant speed, a gentle continuous tail beat, no waypoint yet.
+      fish.currentSpeedPxPerSecond = respawnSpeed;
+      fish.strokePulse = 0.5;
+      fish.turnVelocity = 0;
+      fish.hoverRemainingSeconds = 0;
+      fish.targetX = Number.NaN;
+      fish.targetY = Number.NaN;
       if (fish.x >= margin && fish.x <= state.world.width - margin) {
         fish.status = "swimming";
         fish.wanderTimeRemaining = 2 + random() * 5;
@@ -364,6 +382,10 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLife
       x: fish.x,
       y: fish.y,
       rotation: Math.atan2(fish.directionY, fish.directionX),
+      speed: fish.currentSpeedPxPerSecond,
+      strokePulse: fish.strokePulse,
+      turnVelocity: fish.turnVelocity,
+      hovering: fish.hoverRemainingSeconds > 0,
       size: fish.size,
       hp: fish.hp,
       maxHp: fish.maxHp,

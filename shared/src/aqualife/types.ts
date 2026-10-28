@@ -37,6 +37,24 @@ export interface AquaLifeFish {
   targetDirectionX: number;
   targetDirectionY: number;
   wanderTimeRemaining: number;
+  /** Current wander waypoint in world coordinates; NaN means "pick one on the next update". */
+  targetX: number;
+  targetY: number;
+  /** Current angular velocity of the heading in radians per second (smoothed). */
+  turnVelocity: number;
+  /** Instantaneous swimming speed. It bursts on each tail stroke and decays while gliding. */
+  currentSpeedPxPerSecond: number;
+  /** Seconds until the next tail stroke. */
+  strokeTimerSeconds: number;
+  /** Per-fish stroke rhythm multiplier so a school does not beat in unison. */
+  strokeRhythm: number;
+  /** 1 right after a stroke, decaying toward 0 while gliding. Drives tail beat in the renderer. */
+  strokePulse: number;
+  /** Remaining seconds of hovering in place (0 = not hovering). */
+  hoverRemainingSeconds: number;
+  /** Time accumulator for the smooth heading noise. */
+  noiseTimeSeconds: number;
+  noisePhase: number;
   turnRateRadiansPerSecond: number;
   speedTargetPxPerSecond: number;
   lastSpeedUpdateAtMs: number;
@@ -116,6 +134,14 @@ export interface FishRenderModel {
   x: number;
   y: number;
   rotation: number;
+  /** Instantaneous swimming speed in px/s (includes stroke bursts). */
+  speed: number;
+  /** 1 right after a tail stroke, decaying toward 0 while gliding. */
+  strokePulse: number;
+  /** Heading angular velocity in rad/s; positive turns clockwise on screen. */
+  turnVelocity: number;
+  /** True while the fish hovers in place, balancing with its pectoral fins. */
+  hovering: boolean;
   size: number;
   hp: number;
   maxHp: number | null;

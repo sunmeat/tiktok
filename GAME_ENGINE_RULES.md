@@ -126,6 +126,17 @@ These rules were confirmed by the project owner and should be treated as impleme
 
 
 
+## Fish locomotion model (confirmed by the project owner)
+
+Fish must swim like real fish rather than glide at constant speed. The simulation (`shared/src/aqualife/ai.ts`) and renderer (`client/src/aqualife/pixi-adapter.ts`) implement these behaviors:
+
+- **Burst-and-coast.** Speed jumps with each tail stroke and then decays exponentially until the next stroke. The stroke impulse is scaled so the *average* speed still equals the like-driven speed (0.6 px/s per like/s, idle 1.5 px/s). Faster (more liked) fish stroke more often. Near a waypoint the fish stops stroking and glides to a halt.
+- **Smooth turning.** Heading follows the steering direction through a smoothed, rate-limited angular velocity; the limit depends on current speed (a turning radius) and never exceeds `maxTurnRateRadiansPerSecond`. Heading never snaps.
+- **Waypoint wandering with smooth noise.** A fish swims toward a nearby waypoint roughly ahead of it, with a small smooth noise on the heading. Soft wall avoidance and neighbor separation remain; there is still no attraction to the center and no deliberate targeting for bites.
+- **Hovering.** On arrival or when the wander timer ends, a fish may hover in place for about 1-3 s with a small balancing sway, then picks a new waypoint. Heavily liked (fast) fish rarely hover.
+- **Rendering.** Tail beat frequency and amplitude follow the stroke pulse (about 5 Hz right after a stroke, nearly still while gliding); the body counter-sways against the tail; a turning fish bends its tail toward the inside of the turn. A fish heading left is mirrored instead of rotated, so it never swims upside down. Labels and comments are never mirrored. Animation advances by elapsed simulation time, not per frame.
+- Side entry (calm, steady 28 px/s) and respawn behavior are unchanged.
+
 ## Validated TikTok event ingestion
 
 - Validate connector payloads at the server boundary and convert them to the shared normalized event contract before broadcasting them to AquaLife.

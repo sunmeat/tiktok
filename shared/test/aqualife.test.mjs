@@ -675,3 +675,123 @@ test("respawning fish continue moving even when they have no recent likes", () =
   assert.ok(Math.abs((fish.y - initialY) - entryDirectionY * 1.4) < 0.01,
     "respawning fish should follow its shallow entry angle instead of steering toward the center");
 });
+
+
+function seededRandom(seed) {
+  let value = seed >>> 0;
+  return () => {
+    value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+}
+
+function joinSwimmer(userId, state) {
+  const join = normalizeTikTokEvent("member", { msgId: `${userId}-join`, user: { userId, nickname: userId } }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  return state.fish[userId];
+}
+
+/** Runs the simulation with 16 ms frames and an optional steady like rate (likes sent once per second). */
+function runSwim(state, fish, seconds, likesPerSecond, random, onFrame) {
+  let nowMs = state.nowMs;
+  const frames = Math.round(seconds * 1000 / 16);
+  for (let i = 0; i < frames; i++) {
+    nowMs += 16;
+    if (likesPerSecond && i % 62 === 0) {
+      const like = normalizeTikTokEvent("like", {
+        user: { userId: fish.participantId, nickname: fish.participantId },
+        likeCount: likesPerSecond
+      }, nowMs);
+      processGameEvent(state, like);
+    }
+    stepAquaLife(state, 16, nowMs, random);
+    if (fish.status === "swimming") onFrame?.(fish);
+  }
+}
+
+test("fish burst and coast: speed pulses with each stroke while the average follows the like-driven speed", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const fish = joinSwimmer("burst-viewer", state);
+  const random = seededRandom(7);
+  runSwim(state, fish, 30, 15, random); // warm up: entry, like smoothing
+  let minSpeed = Infinity;
+  let maxSpeed = 0;
+  let distance = 0;
+  let frames = 0;
+  let previousX = fish.x;
+  let previousY = fish.y;
+  runSwim(state, fish, 90, 15, random, f => {
+    minSpeed = Math.min(minSpeed, f.currentSpeedPxPerSecond);
+    maxSpeed = Math.max(maxSpeed, f.currentSpeedPxPerSecond);
+    distance += Math.hypot(f.x - previousX, f.y - previousY);
+    previousX = f.x;
+    previousY = f.y;
+    frames++;
+  });
+  const meanSpeed = distance / (frames * 0.016);
+  const target = AQUALIFE_CONFIG.likeSpeedPxPerSecondPerLikePerSecond * 15;
+  assert.ok(maxSpeed > minSpeed * 3, `speed should pulse (min ${minSpeed.toFixed(2)}, max ${maxSpeed.toFixed(2)})`);
+  assert.ok(meanSpeed > target * 0.6 && meanSpeed < target * 1.3,
+    `mean speed ${meanSpeed.toFixed(2)} px/s should stay near the like-driven ${target} px/s`);
+});
+
+test("fish turn smoothly: heading never snaps and the turn rate stays within the configured limit", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const fish = joinSwimmer("smooth-turner", state);
+  const random = seededRandom(99);
+  let previousHeading = Math.atan2(fish.directionY, fish.directionX);
+  let maxTurnRate = 0;
+  runSwim(state, fish, 120, 30, random, f => {
+    const heading = Math.atan2(f.directionY, f.directionX);
+    let delta = heading - previousHeading;
+    while (delta > Math.PI) delta -= 2 * Math.PI;
+    while (delta < -Math.PI) delta += 2 * Math.PI;
+    maxTurnRate = Math.max(maxTurnRate, Math.abs(delta) / 0.016);
+    previousHeading = heading;
+    assert.ok(Number.isFinite(f.x) && Number.isFinite(f.y) && Number.isFinite(f.turnVelocity));
+  });
+  assert.ok(maxTurnRate <= AQUALIFE_CONFIG.maxTurnRateRadiansPerSecond * 1.05,
+    `max turn rate ${maxTurnRate.toFixed(2)} rad/s must respect the limit`);
+});
+
+test("idle fish occasionally hover in place and then swim on", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const fish = joinSwimmer("hover-viewer", state);
+  const random = seededRandom(2024);
+  let hoverFrames = 0;
+  let sawSwimmingAfterHover = false;
+  let wasHovering = false;
+  let slowestWhileHovering = Infinity;
+  runSwim(state, fish, 300, 0, random, f => {
+    const hovering = f.hoverRemainingSeconds > 0;
+    if (hovering) {
+      hoverFrames++;
+      slowestWhileHovering = Math.min(slowestWhileHovering, f.currentSpeedPxPerSecond);
+    }
+    if (wasHovering && !hovering) sawSwimmingAfterHover = true;
+    wasHovering = hovering;
+  });
+  assert.ok(hoverFrames > 0, "an idle fish should hover now and then");
+  assert.ok(sawSwimmingAfterHover, "hovering must end so the fish keeps exploring");
+  assert.ok(slowestWhileHovering < 0.5, "a hovering fish is practically still");
+});
+
+test("render snapshots expose the locomotion state used by the swimming animation", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const fish = joinSwimmer("snapshot-swimmer", state);
+  const random = seededRandom(5);
+  runSwim(state, fish, 10, 20, random);
+  fish.strokePulse = 0.8;
+  fish.currentSpeedPxPerSecond = 7.5;
+  fish.turnVelocity = -0.4;
+  fish.hoverRemainingSeconds = 0;
+  const model = createAquaLifeRenderSnapshot(state).fish.find(item => item.id === fish.id);
+  assert.ok(model);
+  assert.equal(model.speed, 7.5);
+  assert.equal(model.strokePulse, 0.8);
+  assert.equal(model.turnVelocity, -0.4);
+  assert.equal(model.hovering, false);
+  fish.hoverRemainingSeconds = 1;
+  assert.equal(createAquaLifeRenderSnapshot(state).fish.find(item => item.id === fish.id)?.hovering, true);
+});

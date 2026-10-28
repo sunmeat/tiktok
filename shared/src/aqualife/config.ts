@@ -14,6 +14,23 @@ export interface AquaLifeConfig {
   readonly minWanderIntervalSeconds: number;
   readonly maxWanderIntervalSeconds: number;
   readonly maxTurnRateRadiansPerSecond: number;
+  /** Slowest heading change in rad/s, so even a gliding fish can still reorient. */
+  readonly minTurnRateRadiansPerSecond: number;
+  /** Turning radius in px per unit of fish size; faster fish turn in wider arcs. */
+  readonly turnRadiusPerSize: number;
+  /**
+   * Burst-and-coast: product of drag and stroke interval. Speed decays by exp(-glide)
+   * between strokes, so 1.6 means a fish glides down to ~20% of its post-stroke speed.
+   */
+  readonly strokeGlideFactor: number;
+  readonly minStrokeIntervalSeconds: number;
+  readonly maxStrokeIntervalSeconds: number;
+  /** Chance of hovering instead of choosing a new waypoint; scaled down for fast (liked) fish. */
+  readonly hoverChance: number;
+  readonly hoverMinSeconds: number;
+  readonly hoverMaxSeconds: number;
+  readonly waypointMinDistance: number;
+  readonly waypointMaxDistance: number;
   readonly separationRadius: number;
   readonly separationStrength: number;
   readonly baseBiteDamage: number;
@@ -56,6 +73,16 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   minWanderIntervalSeconds: 4.5,
   maxWanderIntervalSeconds: 9,
   maxTurnRateRadiansPerSecond: 2.4,
+  minTurnRateRadiansPerSecond: 0.45,
+  turnRadiusPerSize: 14,
+  strokeGlideFactor: 1.6,
+  minStrokeIntervalSeconds: 0.8,
+  maxStrokeIntervalSeconds: 1.9,
+  hoverChance: 0.45,
+  hoverMinSeconds: 0.9,
+  hoverMaxSeconds: 2.7,
+  waypointMinDistance: 70,
+  waypointMaxDistance: 220,
   separationRadius: 26,
   separationStrength: 0.35,
   baseBiteDamage: 1,

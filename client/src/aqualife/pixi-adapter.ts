@@ -3,7 +3,10 @@ import { getFishSpeciesDefinition } from "@tiktok-arena/shared";
 import type { AquaLifeRenderSnapshot, FishRenderModel, FishSpeciesId } from "@tiktok-arena/shared";
 
 interface FishView {
+  /** Positioned at the fish; holds the never-flipped label and comment. */
   root: Container;
+  /** Rotated/mirrored so the fish keeps its back up instead of swimming upside down. */
+  swim: Container;
   shadow: Graphics;
   tail: Graphics;
   body: Graphics;
@@ -14,7 +17,15 @@ interface FishView {
   lastFeedback: FishRenderModel["rewardFeedback"];
   lastCombatFeedback: FishRenderModel["combatFeedback"];
   lastSpecies: FishSpeciesId;
-  phase: number;
+  /** Where the tail joins the body, in unscaled species units. */
+  tailJointX: number;
+  tailPhase: number;
+  swayPhase: number;
+  /** Smoothed horizontal mirror, +1 facing right .. -1 facing left. */
+  facing: number;
+  /** Facing chosen with hysteresis so a near-vertical heading cannot flicker. */
+  facingTarget: 1 | -1;
+  pitch: number;
 }
 
 interface JellyfishView {
@@ -24,9 +35,25 @@ interface JellyfishView {
   phase: number;
 }
 
+const TWO_PI = Math.PI * 2;
+/** Largest nose-up/nose-down tilt; steeper headings keep this tilt instead of flipping the fish. */
+const MAX_PITCH = 1.3;
+
+function clamp(value: number, min: number, max: number): number {
+  return value < min ? min : value > max ? max : value;
+}
+
+function wrapAngle(angle: number): number {
+  let value = angle;
+  while (value > Math.PI) value -= TWO_PI;
+  while (value < -Math.PI) value += TWO_PI;
+  return value;
+}
+
 /** Reusable PixiJS display objects. Simulation owns all gameplay state. */
 export class AquaLifePixiAdapter {
   readonly root = new Container();
+  private lastNowMs = -1;
   private readonly fishViews = new Map<string, FishView>();
   private readonly jellyfishViews = new Map<string, JellyfishView>();
   private readonly labelStyle = new TextStyle({
@@ -56,30 +83,26 @@ export class AquaLifePixiAdapter {
     this.root.scale.set(scale);
     this.root.position.set((viewportWidth - snapshot.world.width * scale) / 2, (viewportHeight - snapshot.world.height * scale) / 2);
 
+    // Animation advances by real elapsed simulation time so it is frame-rate independent.
+    const dt = this.lastNowMs < 0 ? 1 / 60 : clamp((snapshot.nowMs - this.lastNowMs) / 1000, 0, 0.1);
+    this.lastNowMs = snapshot.nowMs;
+
     const seen = new Set<string>();
     for (const fish of snapshot.fish) {
       seen.add(fish.id);
       const view = this.fishViews.get(fish.id) ?? this.createFishView(fish);
       view.root.position.set(fish.x, fish.y);
-      view.root.rotation = fish.rotation;
-      view.label.rotation = -fish.rotation;
-      view.phase += 0.12 + Math.min(0.14, fish.size * 0.012);
-      view.tail.scale.x = 0.82 + Math.sin(view.phase) * 0.22;
-      view.tail.rotation = Math.sin(view.phase) * 0.18;
-      view.body.scale.y = 0.97 + Math.sin(view.phase * 0.72) * 0.035;
+      this.animateFish(view, fish, dt);
       if (view.lastSpecies !== fish.species) {
         this.drawFishBody(view.body, fish.species);
         this.drawFishTail(view.tail, fish.species);
+        view.tailJointX = -getFishSpeciesDefinition(fish.species).bodyLength * 0.66;
         view.body.tint = 0xffffff;
         view.lastFeedback = null;
         view.lastCombatFeedback = null;
         view.lastSpecies = fish.species;
       }
       const bodyScale = Math.max(0.2, fish.size);
-      const combatScale = fish.combatFeedback === "attack" ? 1.16 : fish.combatFeedback === "hurt" ? 0.86 : 1;
-      view.body.scale.set(bodyScale * combatScale, (0.97 + Math.sin(view.phase * 0.72) * 0.035) * bodyScale * combatScale);
-      view.tail.scale.set((0.82 + Math.sin(view.phase) * 0.22) * bodyScale, bodyScale);
-      view.tail.rotation = Math.sin(view.phase) * 0.18;
       view.shadow.scale.set(bodyScale, bodyScale);
       const label = `${fish.nickname} · HP ${fish.hp} · ATK ${fish.attackDamage}`;
       if (label !== view.lastLabel) {
@@ -87,7 +110,6 @@ export class AquaLifePixiAdapter {
         view.lastLabel = label;
       }
       view.label.position.set(0, 20 * bodyScale);
-      view.comment.rotation = -fish.rotation;
       view.comment.position.set(0, -25 * bodyScale);
       view.comment.alpha = view.commentUntilMs > snapshot.nowMs ? Math.min(1, (view.commentUntilMs - snapshot.nowMs) / 450) : 0;
       if (fish.rewardFeedback !== view.lastFeedback || fish.combatFeedback !== view.lastCombatFeedback) {
@@ -148,9 +170,60 @@ export class AquaLifePixiAdapter {
     this.root.destroy({ children: true });
   }
 
+  /**
+   * Procedural swimming animation driven by simulation state:
+   * - the tail beats hard (about 5 Hz) right after a stroke and almost stops while gliding;
+   * - the body counter-sways against the tail, giving an S-shaped wave;
+   * - a turning fish bends its tail toward the inside of the turn;
+   * - a hovering fish balances with a slow, small sway;
+   * - heading left mirrors the fish instead of rotating it upside down.
+   */
+  private animateFish(view: FishView, fish: FishRenderModel, dt: number): void {
+    const heading = fish.rotation;
+    const cosH = Math.cos(heading);
+    const sinH = Math.sin(heading);
+    if (cosH > 0.2) view.facingTarget = 1;
+    else if (cosH < -0.2) view.facingTarget = -1;
+    const facingSign = view.facingTarget;
+    const targetPitch = clamp(facingSign > 0 ? Math.atan2(sinH, cosH) : Math.atan2(-sinH, -cosH), -MAX_PITCH, MAX_PITCH);
+    view.pitch += wrapAngle(targetPitch - view.pitch) * (1 - Math.exp(-10 * dt));
+    view.facing += (facingSign - view.facing) * (1 - Math.exp(-14 * dt));
+    view.swim.scale.x = view.facing;
+    view.swim.rotation = view.pitch;
+
+    const bodyScale = Math.max(0.2, fish.size);
+    const combatScale = fish.combatFeedback === "attack" ? 1.16 : fish.combatFeedback === "hurt" ? 0.86 : 1;
+    const bs = bodyScale * combatScale;
+
+    const effort = clamp(fish.strokePulse, 0, 1);
+    const hovering = fish.hovering;
+    const beatHz = hovering ? 1.1 : 0.9 + effort * 4.2;
+    view.tailPhase = (view.tailPhase + dt * TWO_PI * beatHz) % TWO_PI;
+    view.swayPhase = (view.swayPhase + dt * 2.1) % TWO_PI;
+
+    const beatAmplitude = hovering ? 0.07 : 0.07 + effort * 0.42;
+    const wave = Math.sin(view.tailPhase);
+    // Tail trails the turn; the local frame is mirrored when facing left.
+    const turnBend = clamp(-fish.turnVelocity * 0.12 * facingSign, -0.35, 0.35);
+    const tailAngle = wave * beatAmplitude + turnBend;
+
+    const sway = Math.sin(view.swayPhase);
+    const lateral = (hovering ? 0.9 : 0.25 + effort * 0.8) * bs * Math.sin(view.tailPhase + 1.2) * (hovering ? 0.5 : 1)
+      + (hovering ? sway * 0.9 * bs : sway * 0.2 * bs);
+    view.tail.position.set(view.tailJointX * bs, lateral);
+    view.tail.rotation = tailAngle;
+    view.tail.scale.set(bs * (1 - 0.12 * Math.abs(wave) * Math.min(1, beatAmplitude * 2)), bs);
+
+    view.body.position.set(0, lateral);
+    view.body.rotation = -tailAngle * 0.3 + (hovering ? Math.sin(view.swayPhase * 0.8 + 1) * 0.035 : 0);
+    view.body.scale.set(bs, bs * (1 + Math.sin(view.swayPhase * 1.7) * 0.02));
+  }
+
   private drawFishTail(tail: Graphics, speciesId: FishSpeciesId): void {
     const species = getFishSpeciesDefinition(speciesId);
     tail.clear();
+    // The tail swings about the body/tail joint, not about the fish center.
+    tail.pivot.set(-species.bodyLength * 0.66, 0);
     tail.moveTo(-species.bodyLength * 0.66, 0)
       .lineTo(-species.bodyLength - species.tailLength, -species.bodyHeight * 0.92)
       .quadraticCurveTo(-species.bodyLength - species.tailLength * 0.68, 0, -species.bodyLength - species.tailLength, species.bodyHeight * 0.92)
@@ -216,6 +289,7 @@ export class AquaLifePixiAdapter {
 
   private createFishView(fish: FishRenderModel): FishView {
     const root = new Container();
+    const swim = new Container();
     const shadow = new Graphics().ellipse(0, 3, 18, 6).fill({ color: 0x001521, alpha: 0.28 });
     const tail = new Graphics();
     const body = new Graphics();
@@ -226,9 +300,24 @@ export class AquaLifePixiAdapter {
     const comment = new Text({ text: "", style: this.commentStyle });
     comment.anchor.set(0.5, 1);
     comment.alpha = 0;
-    root.addChild(shadow, tail, body, label, comment);
+    swim.addChild(shadow, tail, body);
+    root.addChild(swim, label, comment);
     this.root.addChild(root);
-    const view: FishView = { root, shadow, tail, body, label, comment, commentUntilMs: 0, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null, lastSpecies: fish.species, phase: Math.random() * Math.PI * 2 };
+    const facingTarget: 1 | -1 = Math.cos(fish.rotation) < 0 ? -1 : 1;
+    const view: FishView = {
+      root, swim, shadow, tail, body, label, comment,
+      commentUntilMs: 0,
+      lastLabel: label.text,
+      lastFeedback: null,
+      lastCombatFeedback: null,
+      lastSpecies: fish.species,
+      tailJointX: -getFishSpeciesDefinition(fish.species).bodyLength * 0.66,
+      tailPhase: Math.random() * TWO_PI,
+      swayPhase: Math.random() * TWO_PI,
+      facing: facingTarget,
+      facingTarget,
+      pitch: clamp(facingTarget > 0 ? fish.rotation : Math.atan2(-Math.sin(fish.rotation), -Math.cos(fish.rotation)), -MAX_PITCH, MAX_PITCH)
+    };
     this.fishViews.set(fish.id, view);
     return view;
   }
