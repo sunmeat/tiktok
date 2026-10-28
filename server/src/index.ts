@@ -174,7 +174,8 @@ async function connectToTikTok(): Promise<void> {
 
 const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {
-  console.log(`[server] Listening on port ${port}`);
+  console.log(`[server] Listening on http://localhost:${port}`);
+  console.log(`[tiktok] Configured LIVE target: @${activeUsername}`);
   if (process.env.SIGN_API_KEY) void connectToTikTok();
   else console.warn("[tiktok] SIGN_API_KEY missing; UI is available, TikTok connection is disabled.");
 });
