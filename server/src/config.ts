@@ -1,2 +1,2 @@
-// Ник стримера, к чьему эфиру подключаться. Указывай username без @.
-export const STREAMER_USERNAME = "rezerv_realdimon25";
+// Nickname of the streamer to connect to. Use username without @.
+export const STREAMER_USERNAME = "darthdude_";
