@@ -224,7 +224,7 @@ export function stepAquaLife(
   for (const fish of Object.values(state.fish)) {
     updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
-      if (respawnFish(fish, state.world, state.nowMs, config)) fish.status = "respawning";
+      if (respawnFish(fish, state.world, state.nowMs)) fish.status = "respawning";
       continue;
     }
     if (fish.status === "respawning") {
