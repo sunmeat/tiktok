@@ -30,7 +30,7 @@ export function applyLikeReward(
   const activeMs = Math.max(1, Math.min(config.likeActivityWindowMs, atMs - (fish.likesPerSecondSamples[0]?.atMs ?? atMs) + 1));
   const likesPerSecond = totalInWindow * 1000 / activeMs;
   fish.speedPxPerSecond = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
-  const sizeMultiplier = 1 + Math.floor(participant.likesTotal / 100) * 0.01;
-  fish.size = config.baseFishSize * sizeMultiplier;
+  // Size growth is intentionally not applied until its gameplay formula is confirmed.
+  const sizeMultiplier = fish.size / config.baseFishSize;
   return { hpGained, sizeMultiplier, speedPxPerSecond: fish.speedPxPerSecond };
 }
