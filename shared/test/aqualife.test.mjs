@@ -917,3 +917,25 @@ test("a dead fish fades out smoothly instead of vanishing instantly", () => {
   assert.equal(alphaAt(10_000 + AQUALIFE_CONFIG.deathFadeMs), 0);
   assert.equal(alphaAt(12_000), 0);
 });
+
+
+test("following the streamer upgrades an existing gray fish to Dory", () => {
+  const state = createAquaLifeState();
+  const join = normalizeTikTokEvent("member", {
+    msgId: "follow-upgrade-join",
+    user: { userId: "follow-upgrade-viewer", nickname: "Viewer" }
+  }, 1_000);
+  const follow = normalizeTikTokEvent("follow", {
+    msgId: "follow-upgrade-event",
+    user: { userId: "follow-upgrade-viewer", nickname: "Viewer" }
+  }, 2_000);
+  assert.ok(join && follow);
+
+  processGameEvent(state, join);
+  const fish = state.fish["follow-upgrade-viewer"];
+  assert.equal(fish.species, "standard-gray");
+
+  processGameEvent(state, follow);
+  assert.equal(state.fish["follow-upgrade-viewer"].id, fish.id);
+  assert.equal(state.fish["follow-upgrade-viewer"].species, "dory");
+});
