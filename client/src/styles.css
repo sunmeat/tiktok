@@ -16,11 +16,11 @@ body{overflow:hidden;background:#031b2b;color:var(--text);font-family:Inter,"Seg
 .gift-guide ul{display:grid;gap:3px;margin:0;padding:0;list-style:none}
 .gift-guide li{display:grid;grid-template-columns:auto auto;align-items:center;gap:8px;font-size:10px;line-height:1.25;white-space:nowrap}
 .gift-guide li b{color:#f3fbff;font-weight:750;text-align:left}
-.gift-guide li .gift-icon{display:inline-block;min-width:18px;text-align:center;font-size:15px;vertical-align:-1px}
+.gift-guide li .gift-icon-image{display:inline-block;width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:3px}.gift-guide li .gift-name{vertical-align:middle}
 .gift-guide li .boost{justify-self:end;font-weight:900}
 .gift-guide li .boost.hp{color:var(--green)}
 .gift-guide li .boost.atk{color:#ff9a7a}
-@container sea (max-width:420px){.gift-guide{padding:6px 8px}.gift-guide li{font-size:9px;gap:6px}.gift-guide li .gift-icon{font-size:13px}}
+@container sea (max-width:420px){.gift-guide{padding:6px 8px}.gift-guide li{font-size:9px;gap:6px}.gift-guide li .gift-icon-image{width:18px;height:18px}}
 .guide-title{margin-bottom:7px;color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.12em}
 .aquarium-guide ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
 .aquarium-guide li{display:flex;justify-content:space-between;gap:7px;font-size:10px;line-height:1.25}
