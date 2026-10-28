@@ -5,7 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
-import type { ArenaPlayer, ChatMessage, GiftAlert, ServerMessage } from "@tiktok-arena/shared";
+import type { ArenaPlayer, ChatMessage, GiftAlert, NormalizedGameEvent, ServerMessage } from "@tiktok-arena/shared";
+import { normalizeTikTokEvent } from "@tiktok-arena/shared";
 import { STREAMER_USERNAME } from "./config.js";
 
 type RecordData = any;
@@ -42,6 +43,9 @@ function send(client: WebSocket, message: ServerMessage): void {
 }
 function broadcast(message: ServerMessage): void {
   for (const client of wss.clients) send(client, message);
+}
+function publishGameEvent(event: NormalizedGameEvent | null): void {
+  if (event) broadcast({ type: "aqualife_event", data: event });
 }
 function publishConnectionStatus(isConnected: boolean): void {
   broadcast({ type: "connection_status", data: { connected: isConnected, username: activeUsername || "searching" } });
@@ -110,7 +114,11 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     console.log(`[tiktok] @${username}'s LIVE ended.`);
     scheduleReconnect();
   });
+  connection.on(WebcastEvent.MEMBER, (data: RecordData) => {
+    publishGameEvent(normalizeTikTokEvent("member", data));
+  });
   connection.on(WebcastEvent.CHAT, (data: RecordData) => {
+    publishGameEvent(normalizeTikTokEvent("chat", data));
     const id = userId(data.user);
     const nickname = String(data.user?.nickname || id);
     const message: ChatMessage = { uniqueId: id, nickname, avatarUrl: avatar(data.user), comment: String(data.comment ?? data.content ?? ""), timestamp: Date.now() };
@@ -119,12 +127,14 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     broadcast({ type: "chat_message", data: message });
   });
   connection.on(WebcastEvent.LIKE, (data: RecordData) => {
+    publishGameEvent(normalizeTikTokEvent("like", data));
     const id = userId(data.user);
     const count = Math.max(1, Number(data.likeCount ?? data.count ?? 1) || 1);
     updatePlayer(id, Math.max(1, Math.floor(count / 10)), avatar(data.user), String(data.user?.nickname || id), { likes: count });
   });
   if (WebcastEvent.FOLLOW) {
     connection.on(WebcastEvent.FOLLOW, (data: RecordData) => {
+      publishGameEvent(normalizeTikTokEvent("follow", data));
       const id = userId(data.user);
       updatePlayer(id, 0, avatar(data.user), String(data.user?.nickname || id), { isFollowing: true });
     });
@@ -135,6 +145,7 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     const diamonds = Number(data.giftDetails?.diamondCount ?? data.gift?.diamondCount ?? 0);
     const count = Math.max(1, Number(data.repeatCount || 1));
     if (giftType === 1 && !data.repeatEnd) return;
+    publishGameEvent(normalizeTikTokEvent("gift", data));
     const id = userId(data.user);
     const nickname = String(data.user?.nickname || id);
     const avatarUrl = avatar(data.user);
