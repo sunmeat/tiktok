@@ -330,7 +330,7 @@ test("size grows by one percent at cumulative 100-like thresholds", () => {
   assert.equal(state.participants["growth-viewer"].likesTotal, 101);
 });
 
-test("growth compounds at 200 likes and remains after death and respawn", () => {
+test("size grows linearly at 200 likes and remains after death and respawn", () => {
   const state = createAquaLifeState();
   const event = normalizeTikTokEvent("like", {
     msgId: "growth-200",
@@ -342,7 +342,7 @@ test("growth compounds at 200 likes and remains after death and respawn", () => 
 
   const fish = state.fish["persistent-growth"];
   const grownSize = fish.size;
-  assert.ok(Math.abs(grownSize - fish.baseSize * 1.01 ** 2) < 1e-10);
+  assert.ok(Math.abs(grownSize - fish.baseSize * 1.02) < 1e-10);
 
   fish.hp = 0;
   fish.status = "dead";
