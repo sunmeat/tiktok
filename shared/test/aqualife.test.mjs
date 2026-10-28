@@ -469,3 +469,32 @@ test("jellyfish damage is one HP and contact damage has a cooldown", () => {
   assert.equal(resolveJellyfishCollision(fish, jellyfish, 2_950).hit, true);
   assert.equal(fish.hp, 3);
 });
+
+
+test("simulation automatically selects the nearest smaller fish and updates HP", () => {
+  const state = createAquaLifeState();
+  for (const [userId, msgId] of [["hunter", "hunter-join"], ["prey", "prey-join"]]) {
+    const event = normalizeTikTokEvent("member", {
+      msgId, user: { userId, nickname: userId }
+    }, 0);
+    assert.ok(event);
+    processGameEvent(state, event);
+  }
+  const hunter = state.fish.hunter;
+  const prey = state.fish.prey;
+  hunter.size = 2;
+  hunter.x = 200;
+  hunter.y = 200;
+  prey.size = 1;
+  prey.x = 220;
+  prey.y = 200;
+
+  stepAquaLife(state, 50, 1_000, () => 0.5);
+
+  assert.equal(prey.hp, 4);
+  assert.equal(hunter.status, "attacking");
+  assert.equal(hunter.attackCooldownUntilMs, 2_000);
+  const snapshot = createAquaLifeRenderSnapshot(state);
+  assert.equal(snapshot.fish.find(fish => fish.id === hunter.id)?.combatFeedback, "attack");
+  assert.equal(snapshot.fish.find(fish => fish.id === prey.id)?.combatFeedback, "hurt");
+});
