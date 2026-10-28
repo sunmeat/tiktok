@@ -71,7 +71,7 @@ function Arena() {
           <div className="rank">{String(index+1).padStart(2,"0")}</div><Avatar src={player.profilePictureUrl} className="player-avatar" />
           <div className="player-main"><div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "NOT FOLLOWING"}</span></div>
             <div className="player-score">✦ {player.score.toLocaleString("en-US")} points</div>
-            <div className="stats"><span>♥ <b>{player.likes.toLocaleString("en-US")}</b> лайков</span><span>▤ <b>{player.comments.toLocaleString("en-US")}</b> комм.</span><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b> подарков</span></div>
+            <div className="stats"><span>♥ <b>{player.likes.toLocaleString("en-US")}</b> likes</span><span>▤ <b>{player.comments.toLocaleString("en-US")}</b> comments</span><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b> gifts</span></div>
           </div>
         </article>)}
       </div>
