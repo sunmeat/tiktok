@@ -389,7 +389,7 @@ test("render snapshots expose short reward feedback without recreating fish view
 });
 
 
-test("fish bites use size-aware range, choose smaller targets and obey cooldown", () => {
+test("fish bites allow equal-size opponents, prefer smaller targets and obey cooldown", () => {
   const state = createAquaLifeState();
   const join = (userId, msgId) => normalizeTikTokEvent("member", {
     msgId, user: { userId, nickname: userId }
@@ -416,6 +416,10 @@ test("fish bites use size-aware range, choose smaller targets and obey cooldown"
   assert.equal(small.hp, 4);
   assert.equal(big.status, "attacking");
   assert.equal(resolveFishBite(big, small, 2_500).hit, false, "cooldown blocks rapid repeat bites");
+  const equalA = { ...big, id: "equal-a", size: 1, hp: 5, status: "swimming", attackCooldownUntilMs: 0, attackDamage: 1, x: 200, y: 200 };
+  const equalB = { ...small, id: "equal-b", size: 1, hp: 5, status: "swimming", attackCooldownUntilMs: 0, attackDamage: 1, x: 210, y: 200 };
+  assert.equal(resolveFishBite(equalA, equalB, 4_000).hit, true, "equal-size fish must fight on contact");
+  assert.equal(equalB.hp, 4, "equal-size fish must take combat damage");
   assert.equal(small.hp, 4);
 
   small.x = 300;
