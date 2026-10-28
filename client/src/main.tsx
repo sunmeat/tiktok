@@ -42,7 +42,7 @@ function Arena() {
       socket = new WebSocket(url);
       socket.onopen = () => { setServerOnline(true); delay = 1000; };
       socket.onmessage = event => {
-        try { handler.current(JSON.parse(event.data) as ServerMessage); } catch { /* Ignore malformed events. */ }
+        try { handler.current(JSON.parse(event.data) as ServerMessage); } catch {}
       };
       socket.onclose = () => {
         setServerOnline(false);
