@@ -1029,3 +1029,53 @@ test("gift normalization accepts connector snake_case fields used by LIVE gift p
   assert.equal(event.count, 1);
   assert.deepEqual(giftBoostFor(event.giftId, event.giftName), { hp: 100, attack: 0 });
 });
+
+
+test("viewer join spawns a fish without requiring likes, gifts, chat, or follows", () => {
+  const state = createAquaLifeState(540, 960);
+  const joined = normalizeTikTokEvent("member", {
+    msgId: "silent-viewer-join",
+    user: { userId: "silent-viewer", uniqueId: "silent_viewer", nickname: "Silent Viewer" }
+  }, 1_000);
+  assert.ok(joined);
+  assert.equal(joined.type, "viewer-joined");
+  processGameEvent(state, joined);
+
+  const fish = state.fish["silent-viewer"];
+  assert.ok(fish, "joining the stream alone should create a fish");
+  assert.equal(fish.isAiControlled, false);
+  assert.equal(fish.species, "standard-gray");
+
+  for (let i = 0; i < 40; i++) stepAquaLife(state, 50, 1_050 + i * 50, () => 0.5);
+  assert.equal(fish.status, "swimming", "the fish should swim into the visible scene without activity");
+  assert.ok(fish.x >= 0 && fish.x <= state.world.width);
+});
+
+test("departing viewer fish fades for one second and is then removed", () => {
+  const state = createAquaLifeState();
+  const joined = normalizeTikTokEvent("member", {
+    msgId: "leaving-viewer-join",
+    user: { userId: "leaving-viewer", nickname: "Leaving Viewer" }
+  }, 1_000);
+  assert.ok(joined);
+  processGameEvent(state, joined);
+  const fish = state.fish["leaving-viewer"];
+  assert.ok(fish);
+
+  const left = normalizeTikTokEvent("member", {
+    msgId: "leaving-viewer-left",
+    user: { userId: "leaving-viewer", nickname: "Leaving Viewer" },
+    action: "leave"
+  }, 2_000);
+  assert.ok(left);
+  processGameEvent(state, { ...left, type: "viewer-left" });
+  assert.equal(fish.leaveAtMs, state.nowMs + 1_000);
+
+  state.nowMs += 500;
+  const halfway = createAquaLifeRenderSnapshot(state).fish.find(item => item.id === fish.id);
+  assert.ok(halfway);
+  assert.ok(halfway.alpha > 0.45 && halfway.alpha < 0.55, `expected a half-second fade, got alpha=${halfway.alpha}`);
+
+  stepAquaLife(state, 500, state.nowMs + 500, () => 0.5);
+  assert.equal(state.fish["leaving-viewer"], undefined, "the fish should be removed at the one-second mark");
+});
