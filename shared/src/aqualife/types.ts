@@ -51,6 +51,9 @@ export interface AquaLifeFish {
   attackDamage: number;
   isAiControlled: boolean;
   likesPerSecondSamples: Array<{ atMs: number; count: number }>;
+  lastLikeAtMs: number | null;
+  lastHealAtMs: number | null;
+  lastGrowthAtMs: number | null;
   respawnAtMs: number | null;
   buffs: AquaLifeBuff[];
 }
@@ -110,6 +113,7 @@ export interface FishRenderModel {
   hp: number;
   maxHp: number | null;
   status: FishStatus;
+  rewardFeedback: "activity" | "heal" | "growth" | null;
 }
 
 export interface AquaLifeRenderSnapshot {
@@ -118,4 +122,5 @@ export interface AquaLifeRenderSnapshot {
   jellyfish: AquaLifeJellyfish[];
   activeParticipantCount: number;
   livingFishCount: number;
+  nowMs: number;
 }
