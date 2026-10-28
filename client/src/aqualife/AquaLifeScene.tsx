@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
+import { Application, Graphics } from "pixi.js";
 import {
   AQUALIFE_CONFIG,
   addJellyfish,
@@ -85,7 +85,8 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
         plant.stroke({ color: i % 3 === 0 ? 0x4dd4a1 : 0x168b75, width: 4 + (i % 2), cap: "round", join: "round" });
         background.addChild(plant);
       }
-      pixi.stage.addChild(background);
+      adapter = new AquaLifePixiAdapter(pixi.stage);
+      adapter.root.addChildAt(background, 0);
 
       for (let i = 0; i < 18; i++) {
         const radius = 1.5 + random() * 2.5;
@@ -108,8 +109,6 @@ export function AquaLifeScene({ eventsRef }: AquaLifeSceneProps) {
           size: 8 + random() * 5
         });
       }
-      adapter = new AquaLifePixiAdapter(pixi.stage);
-
       pixi.ticker.add(ticker => {
         const deltaMs = Math.min(100, ticker.deltaMS);
         let processed = 0;
