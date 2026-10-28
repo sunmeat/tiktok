@@ -6,6 +6,7 @@ interface FishView {
   body: Graphics;
   label: Text;
   lastLabel: string;
+  lastFeedback: FishRenderModel["rewardFeedback"];
 }
 
 /**
@@ -52,6 +53,14 @@ export class AquaLifePixiAdapter {
         view.lastLabel = label;
       }
       view.label.position.set(0, 18 * bodyScale);
+      if (fish.rewardFeedback !== view.lastFeedback) {
+        view.body.tint =
+          fish.rewardFeedback === "growth" ? 0xffd45c
+          : fish.rewardFeedback === "heal" ? 0x68ff9b
+          : fish.rewardFeedback === "activity" ? 0x73e8ff
+          : 0xffffff;
+        view.lastFeedback = fish.rewardFeedback;
+      }
       view.root.alpha = fish.status === "dead" ? 0 : 1;
     }
 
@@ -81,7 +90,7 @@ export class AquaLifePixiAdapter {
     label.anchor.set(0.5, 0);
     root.addChild(body, label);
     this.root.addChild(root);
-    const view = { root, body, label, lastLabel: label.text };
+    const view = { root, body, label, lastLabel: label.text, lastFeedback: null };
     this.fishViews.set(fish.id, view);
     return view;
   }
