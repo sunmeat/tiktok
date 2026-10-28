@@ -121,6 +121,7 @@ export function createFishForParticipant(
     attackAnimationUntilMs: 0,
     lastJellyfishHitAtMs: null,
     respawnAtMs: null,
+    leaveAtMs: null,
     buffs: []
   };
   state.fish[participant.userId] = fish;
@@ -133,7 +134,7 @@ export function activateParticipant(state: AquaLifeGameState, userId: string, co
   if (!participant) return false;
   participant.isActive = true;
   const fish = createFishForParticipant(state, participant, config);
-  if (fish) fish.isAiControlled = false;
+  if (fish) { fish.isAiControlled = false; fish.leaveAtMs = null; }
   recalculateCounts(state);
   return fish !== null;
 }
@@ -144,7 +145,7 @@ export function deactivateParticipant(state: AquaLifeGameState, userId: string):
   if (!participant) return false;
   participant.isActive = false;
   const fish = state.fish[userId];
-  if (fish) fish.isAiControlled = true;
+  if (fish) { fish.isAiControlled = true; fish.leaveAtMs = state.nowMs + 30_000; }
   recalculateCounts(state);
   return true;
 }
@@ -255,6 +256,7 @@ export function processGameEvent(
     const fish = createFishForParticipant(state, participant, config);
     if (fish) fish.isAiControlled = false;
   }
+  if (participant.isActive && state.fish[event.userId]) state.fish[event.userId].leaveAtMs = null;
   recalculateCounts(state);
 }
 
@@ -269,6 +271,10 @@ export function stepAquaLife(
   state.nowMs = Number.isFinite(nowMs) && nowMs >= 0 ? nowMs : state.nowMs + boundedDelta;
   const allFish = Object.values(state.fish);
   for (const fish of allFish) {
+    if (fish.leaveAtMs !== null && state.nowMs >= fish.leaveAtMs) {
+      removeFish(state, fish.id);
+      continue;
+    }
     updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
       if (!state.participants[fish.participantId]?.isActive) {
@@ -363,6 +369,7 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLife
       maxHp: fish.maxHp,
       attackDamage: fish.attackDamage,
       status: fish.status,
+      alpha: fish.leaveAtMs === null ? 1 : Math.max(0, Math.min(1, (fish.leaveAtMs - state.nowMs) / 1_200)),
       combatFeedback:
         fish.attackAnimationUntilMs > state.nowMs
           ? "attack"
