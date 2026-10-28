@@ -617,3 +617,24 @@ test("idle fish keep cruising without likes and change heading gradually", () =>
   assert.ok(fish.x > fish.size * 12 && fish.x < state.world.width - fish.size * 12);
   assert.ok(fish.y > fish.size * 12 && fish.y < state.world.height - fish.size * 12);
 });
+
+
+test("respawning fish continue moving even when they have no recent likes", () => {
+  const state = createAquaLifeState(540, 960);
+  const join = normalizeTikTokEvent("member", {
+    msgId: "idle-respawn-join",
+    user: { userId: "idle-respawn", nickname: "Idle swimmer" }
+  }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["idle-respawn"];
+  fish.status = "dead";
+  fish.hp = 0;
+  fish.respawnAtMs = 1_000;
+
+  stepAquaLife(state, 50, 1_000, () => 0.5);
+  assert.equal(fish.status, "respawning");
+  const initialY = fish.y;
+  stepAquaLife(state, 50, 1_050, () => 0.5);
+  assert.ok(fish.y > initialY, "idle fish should travel toward the tank instead of crawling in place");
+});
