@@ -256,6 +256,7 @@ test("movement remains bounded with 500 fish and a burst of likes", () => {
   for (let frame = 0; frame < 10; frame++) stepAquaLife(state, 50, 11_000 + frame * 50, random);
 
   assert.equal(Object.keys(state.fish).length, AQUALIFE_CONFIG.maxFish);
+  assert.equal(state.fish["load-user-0"].speedTargetPxPerSecond, AQUALIFE_CONFIG.maxSpeedPxPerSecond);
   for (const fish of Object.values(state.fish)) {
     assert.ok(Number.isFinite(fish.x) && Number.isFinite(fish.y));
     assert.ok(fish.x >= 0 && fish.x <= state.world.width);
@@ -263,4 +264,22 @@ test("movement remains bounded with 500 fish and a burst of likes", () => {
     assert.ok(fish.speedPxPerSecond <= AQUALIFE_CONFIG.maxSpeedPxPerSecond);
     assert.ok(fish.likesPerSecondSamples.length <= AQUALIFE_CONFIG.maxLikeSamplesPerFish);
   }
+});
+
+
+test("like activity sample history is capped for repeated event bursts", () => {
+  const state = createAquaLifeState();
+  for (let i = 0; i < AQUALIFE_CONFIG.maxLikeSamplesPerFish + 10; i++) {
+    const event = normalizeTikTokEvent("like", {
+      msgId: "sample-cap-" + i,
+      user: { userId: "sample-cap-viewer", nickname: "Viewer" },
+      likeCount: 1
+    }, 1_000);
+    assert.ok(event);
+    processGameEvent(state, event);
+  }
+  assert.equal(
+    state.fish["sample-cap-viewer"].likesPerSecondSamples.length,
+    AQUALIFE_CONFIG.maxLikeSamplesPerFish
+  );
 });
