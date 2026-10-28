@@ -846,3 +846,44 @@ test("every fish bite records its damage once so the renderer can float a -N num
   assert.equal(model?.damageSeq, 2);
   assert.equal(model?.lastDamage, 3);
 });
+
+
+test("confirmed gifts grant their HP/attack boosts and unknown gifts keep the +1/+1 default", () => {
+  const state = createAquaLifeState();
+  const gift = (userId, giftName, count, id) => {
+    const event = normalizeTikTokEvent("gift", {
+      msgId: id, user: { userId, nickname: userId }, repeatCount: count, giftDetails: { giftName }
+    }, 1_000);
+    assert.ok(event);
+    processGameEvent(state, event);
+    return state.fish[userId];
+  };
+  const rose = gift("gift-viewer-a", "Rose", 2, "g-a");
+  assert.equal(rose.hp, 5 + 200);
+  assert.equal(rose.attackDamage, 1);
+  const flame = gift("gift-viewer-b", "Пламенное сердце", 3, "g-b");
+  assert.equal(flame.attackDamage, 1 + 15);
+  assert.equal(flame.hp, 5);
+  const squirrel = gift("gift-viewer-c", "белочка", 1, "g-c");
+  assert.equal(squirrel.hp, 5 + 1000);
+  const unknown = gift("gift-viewer-d", "Mystery Box", 2, "g-d");
+  assert.equal(unknown.hp, 7);
+  assert.equal(unknown.attackDamage, 3);
+});
+
+test("a dead fish fades out smoothly instead of vanishing instantly", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const attacker = joinSwimmer("fade-attacker", state);
+  const victim = joinSwimmer("fade-victim", state);
+  attacker.status = "swimming"; victim.status = "swimming";
+  attacker.size = 2; attacker.x = 100; attacker.y = 100;
+  victim.size = 1; victim.x = 120; victim.y = 100; victim.hp = 1;
+  assert.equal(resolveFishBite(attacker, victim, 10_000).killed, true);
+  state.nowMs = 10_000;
+  const alphaAt = ms => { state.nowMs = ms; return createAquaLifeRenderSnapshot(state).fish.find(f => f.id === victim.id).alpha; };
+  assert.equal(alphaAt(10_000), 1);
+  const half = alphaAt(10_000 + AQUALIFE_CONFIG.deathFadeMs / 2);
+  assert.ok(half > 0.4 && half < 0.6, `half-way alpha ${half}`);
+  assert.equal(alphaAt(10_000 + AQUALIFE_CONFIG.deathFadeMs), 0);
+  assert.equal(alphaAt(12_000), 0);
+});

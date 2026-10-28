@@ -40,7 +40,7 @@ interface JellyfishView {
 const TWO_PI = Math.PI * 2;
 /** Bounded pool of floating combat numbers; the oldest is reused when all are busy. */
 const MAX_DAMAGE_NUMBERS = 24;
-const DAMAGE_NUMBER_SECONDS = 1;
+const DAMAGE_NUMBER_SECONDS = 1.3;
 
 interface DamageNumber {
   text: Text;
@@ -73,9 +73,9 @@ export class AquaLifePixiAdapter {
   private readonly damageStyle = new TextStyle({
     fill: "#ff5252",
     fontFamily: "Arial",
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: "900",
-    stroke: { color: "#2a0606", width: 4 }
+    stroke: { color: "#2a0606", width: 5 }
   });
   private readonly fishViews = new Map<string, FishView>();
   private readonly jellyfishViews = new Map<string, JellyfishView>();
@@ -151,7 +151,8 @@ export class AquaLifePixiAdapter {
         view.lastFeedback = fish.rewardFeedback;
         view.lastCombatFeedback = fish.combatFeedback;
       }
-      view.root.alpha = fish.status === "dead" ? 0 : fish.alpha;
+      // Dead fish fade out smoothly; the simulation computes alpha for death and departure.
+      view.root.alpha = fish.alpha;
     }
 
     for (const [id, view] of this.fishViews) {
@@ -236,7 +237,7 @@ export class AquaLifePixiAdapter {
       }
       // Rises with ease-out, pops in slightly larger, then fades over the last 40%.
       const rise = 1 - (1 - t) * (1 - t);
-      item.text.position.set(item.startX + item.drift * t, item.startY - 34 * rise);
+      item.text.position.set(item.startX + item.drift * t, item.startY - 40 * rise);
       item.text.scale.set(t < 0.15 ? 1.35 - 0.35 * (t / 0.15) : 1);
       item.text.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
     }

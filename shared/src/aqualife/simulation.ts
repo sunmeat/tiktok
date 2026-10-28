@@ -3,6 +3,7 @@ import { updateFishMovement, type RandomSource } from "./ai.js";
 import { resolveFishBite, resolveJellyfishCollision, respawnFish } from "./combat.js";
 import { applyLikeReward, updateLikeActivitySpeed } from "./rewards.js";
 import { speciesForGiftId } from "./species.js";
+import { giftBoostFor } from "./gifts.js";
 import type {
   AquaLifeFish,
   AquaLifeGameState,
@@ -259,8 +260,10 @@ export function processGameEvent(
     const fish = createFishForParticipant(state, participant, config);
     if (fish) {
       const giftCount = Number.isFinite(event.count) ? Math.max(1, Math.floor(event.count ?? 1)) : 1;
-      fish.attackDamage += giftCount;
-      fish.hp += giftCount;
+      // Confirmed gifts grant specific HP/attack; other gifts keep the original +1 HP/+1 ATK per gift.
+      const boost = giftBoostFor(event.giftId, event.giftName);
+      fish.attackDamage += boost ? boost.attack * giftCount : giftCount;
+      fish.hp += boost ? boost.hp * giftCount : giftCount;
       fish.lastHealAtMs = event.receivedAtMs;
       fish.isAiControlled = false;
     }
@@ -373,7 +376,7 @@ function recalculateCounts(state: AquaLifeGameState): void {
 
 
 /** Builds a renderer-only snapshot; rotation follows the current swimming direction. */
-export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLifeRenderSnapshot {
+export function createAquaLifeRenderSnapshot(state: AquaLifeGameState, config: AquaLifeConfig = AQUALIFE_CONFIG): AquaLifeRenderSnapshot {
   return {
     world: { ...state.world },
     fish: Object.values(state.fish).map(fish => ({
@@ -395,7 +398,14 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLife
       maxHp: fish.maxHp,
       attackDamage: fish.attackDamage,
       status: fish.status,
-      alpha: fish.leaveAtMs === null ? 1 : Math.max(0, Math.min(1, (fish.leaveAtMs - state.nowMs) / 1_200)),
+      alpha: Math.min(
+        fish.leaveAtMs === null ? 1 : Math.max(0, Math.min(1, (fish.leaveAtMs - state.nowMs) / 1_200)),
+        fish.status === "dead"
+          ? (fish.respawnAtMs === null
+            ? 0
+            : Math.max(0, Math.min(1, 1 - (state.nowMs - (fish.respawnAtMs - config.respawnDelayMs)) / config.deathFadeMs)))
+          : 1
+      ),
       combatFeedback:
         fish.attackAnimationUntilMs > state.nowMs
           ? "attack"

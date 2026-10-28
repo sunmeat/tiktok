@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
+import { GIFT_GUIDE } from "@tiktok-arena/shared";
 import type { ArenaPlayer, GiftAlert, NormalizedGameEvent, ServerMessage } from "@tiktok-arena/shared";
 import { AquaLifeScene } from "./aqualife/AquaLifeScene.js";
 import "./styles.css";
@@ -54,6 +55,18 @@ function Arena() {
     <section className="aquarium-panel" aria-label="AquaLife underwater scene">
       <div className="sea-stage">
       <AquaLifeScene eventsRef={aquaEventsRef} />
+      <aside className="gift-guide overlay-panel" aria-label="Gift power-ups">
+        <div className="guide-title">GIFT POWER-UPS</div>
+        <ul>
+          {GIFT_GUIDE.map(gift => <li key={gift.name}>
+            <b>{gift.emoji} {gift.name}</b>
+            <span className="coins">🪙 {gift.coins}</span>
+            {gift.boost.hp > 0
+              ? <span className="boost hp">+{gift.boost.hp.toLocaleString("en-US")} HP</span>
+              : <span className="boost atk">+{gift.boost.attack} ATK</span>}
+          </li>)}
+        </ul>
+      </aside>
       <aside className="aquarium-guide overlay-panel" aria-label="How to play">
         <div className="guide-title">HOW TO PLAY</div>
         <ul>

@@ -4,6 +4,8 @@ export interface AquaLifeConfig {
   readonly likesPerSizeGrowth: number;
   readonly sizeGrowthPerThreshold: number;
   readonly respawnDelayMs: number;
+  /** A dead fish fades out smoothly over this many ms (same as a leaving viewer's final fade). */
+  readonly deathFadeMs: number;
   readonly likeSpeedPxPerSecondPerLikePerSecond: number;
   readonly likeActivityWindowMs: number;
   readonly baseFishSize: number;
@@ -63,6 +65,7 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   likesPerSizeGrowth: 100,
   sizeGrowthPerThreshold: 0.15,
   respawnDelayMs: 5_000,
+  deathFadeMs: 1_200,
   likeSpeedPxPerSecondPerLikePerSecond: 0.6,
   likeActivityWindowMs: 5_000,
   baseFishSize: 1,
