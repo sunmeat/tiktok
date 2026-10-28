@@ -364,6 +364,7 @@ test("render snapshots expose short reward feedback without recreating fish view
   }, 1_000);
   assert.ok(event);
   processGameEvent(state, event);
+  stepAquaLife(state, 50, 1_050, () => 0.5);
 
   const snapshot = createAquaLifeRenderSnapshot(state);
   const fish = snapshot.fish.find(item => item.id === "fish-1");
