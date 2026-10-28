@@ -6,15 +6,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
 import type { ArenaPlayer, ChatMessage, GiftAlert, ServerMessage } from "@tiktok-arena/shared";
-import {
-  DISCOVERY_CHECK_DELAY_MS,
-  DISCOVERY_RETRY_MS,
-  DISCOVERY_USERNAMES,
-  MY_TIKTOK_USERNAME,
-  TARGET_VIEWERS,
-  USE_MY_STREAM,
-  VIEWER_COUNT_TOLERANCE
-} from "./config.js";
+import { STREAMER_USERNAME } from "./config.js";
 
 type RecordData = any;
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,7 +18,7 @@ const reconnectDelay = 30_000;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let connecting = false;
 let connected = false;
-let activeUsername = USE_MY_STREAM ? MY_TIKTOK_USERNAME : "";
+const activeUsername = STREAMER_USERNAME.trim().replace(/^@/, "");
 let tiktok: TikTokLiveConnection | undefined;
 
 app.disable("x-powered-by");
@@ -34,7 +26,6 @@ app.get("/health", (_req, res) => res.json({
   status: "ok",
   tiktokConnected: connected,
   username: activeUsername || null,
-  mode: USE_MY_STREAM ? "own-stream" : "discovery",
   clients: wss.clients.size
 }));
 const clientDist = path.resolve(dirname, "../../client/dist");
@@ -93,71 +84,6 @@ function createConnection(username: string): TikTokLiveConnection {
   });
 }
 
-function readViewerCount(info: RecordData): number | undefined {
-  const candidates = [
-    info?.userCount,
-    info?.user_count,
-    info?.roomInfo?.userCount,
-    info?.roomInfo?.user_count,
-    info?.room?.userCount,
-    info?.room?.user_count,
-    info?.data?.userCount,
-    info?.data?.user_count,
-    info?.data?.roomInfo?.userCount,
-    info?.data?.roomInfo?.user_count
-  ];
-  for (const value of candidates) {
-    const count = Number(value);
-    if (value !== undefined && value !== null && Number.isFinite(count) && count >= 0) return count;
-  }
-  return undefined;
-}
-
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-async function findCandidateStream(): Promise<string | undefined> {
-  const candidates = [...new Set(DISCOVERY_USERNAMES.map(name => name.trim().replace(/^@/, "")).filter(Boolean))];
-  if (candidates.length === 0) {
-    console.warn("[discovery] DISCOVERY_USERNAMES is empty. Add candidate usernames in server/src/config.ts.");
-    return undefined;
-  }
-
-  console.log(`[discovery] Looking for a LIVE with ${TARGET_VIEWERS}-${TARGET_VIEWERS + VIEWER_COUNT_TOLERANCE} viewers among ${candidates.length} candidates.`);
-  const matches: Array<{ username: string; viewers: number; distance: number }> = [];
-
-  for (const candidate of candidates) {
-    try {
-      const probe = createConnection(candidate);
-      const isLive = await probe.fetchIsLive();
-      if (!isLive) {
-        console.log(`[discovery] @${candidate}: offline`);
-      } else {
-        const info = await probe.fetchRoomInfo();
-        const viewers = readViewerCount(info as RecordData);
-        if (viewers === undefined) {
-          console.log(`[discovery] @${candidate}: LIVE, viewer count unavailable`);
-        } else {
-          console.log(`[discovery] @${candidate}: LIVE, ${viewers} viewers`);
-          const distance = viewers - TARGET_VIEWERS;
-          if (distance >= 0 && distance <= VIEWER_COUNT_TOLERANCE) matches.push({ username: candidate, viewers, distance });
-        }
-      }
-    } catch (error) {
-      console.warn(`[discovery] Could not check @${candidate}:`, error instanceof Error ? error.message : error);
-    }
-    await wait(DISCOVERY_CHECK_DELAY_MS);
-  }
-
-  matches.sort((a, b) => a.distance - b.distance);
-  const selected = matches[0];
-  if (selected) {
-    console.log(`[discovery] Selected @${selected.username} with ${selected.viewers} viewers.`);
-    return selected.username;
-  }
-  console.log("[discovery] No matching LIVE found. Will scan again later.");
-  return undefined;
-}
-
 function scheduleReconnect(delay = reconnectDelay): void {
   if (reconnectTimer) return;
   reconnectTimer = setTimeout(() => {
@@ -179,7 +105,7 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     connected = false;
     publishConnectionStatus(false);
     console.log(`[tiktok] @${username}'s LIVE ended.`);
-    scheduleReconnect( USE_MY_STREAM ? reconnectDelay : DISCOVERY_RETRY_MS);
+    scheduleReconnect();
   });
   connection.on(WebcastEvent.CHAT, (data: RecordData) => {
     const id = userId(data.user);
@@ -218,35 +144,28 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
 
 async function connectToTikTok(): Promise<void> {
   if (connecting || connected || !process.env.SIGN_API_KEY) return;
+  if (!activeUsername) {
+    console.error("[tiktok] STREAMER_USERNAME is empty. Set it in server/src/config.ts.");
+    return;
+  }
+
   connecting = true;
   try {
-    let username = MY_TIKTOK_USERNAME;
-    if (!USE_MY_STREAM) {
-      const candidate = await findCandidateStream();
-      if (!candidate) {
-        scheduleReconnect(DISCOVERY_RETRY_MS);
-        return;
-      }
-      username = candidate;
-    }
-
-    activeUsername = username;
     players.clear();
-    const connection = createConnection(username);
+    const connection = createConnection(activeUsername);
     tiktok = connection;
-    attachEvents(connection, username);
+    attachEvents(connection, activeUsername);
     publishConnectionStatus(false);
     try {
       const state = await connection.connect();
       if (tiktok !== connection) return;
       connected = true;
       publishConnectionStatus(true);
-      console.log(`[tiktok] Connected to @${username}, room ${state.roomId}`);
+      console.log(`[tiktok] Connected to @${activeUsername}, room ${state.roomId}`);
     } catch (error) {
       const err = error as { message?: string; retryAfter?: number };
-      console.error(`[tiktok] Connection to @${username} failed:`, err?.message || error);
-      if (!USE_MY_STREAM) activeUsername = "";
-      scheduleReconnect(!USE_MY_STREAM ? DISCOVERY_RETRY_MS : (Number(err?.retryAfter) > 0 ? Number(err.retryAfter) : reconnectDelay));
+      console.error(`[tiktok] Connection to @${activeUsername} failed:`, err?.message || error);
+      scheduleReconnect(Number(err?.retryAfter) > 0 ? Number(err.retryAfter) : reconnectDelay);
     }
   } finally {
     connecting = false;
