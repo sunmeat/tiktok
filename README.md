@@ -1,48 +1,78 @@
-# TikTok Live Arena
+# AquaLife
 
-Локальный TypeScript-монорепозиторий для интерактивного TikTok LIVE overlay. Сервер подключается к выбранному LIVE и передаёт события в React-клиент по WebSocket. Клиент отображает чат, рейтинг зрителей и эффекты подарков.
+AquaLife is an interactive underwater arena for TikTok LIVE. Viewers appear as fish in a living aquarium, swim around the reef, and compete in a continuous ecosystem. Likes make fish swim faster, while ongoing engagement helps them grow stronger.
 
-## Локальный запуск
+The project is a TypeScript monorepo built with React, PixiJS 8, and WebSockets. The server receives TikTok LIVE events and broadcasts normalized events to the browser-based aquarium.
 
-Требования: Node.js 22+ и npm.
+## Features
+
+- Real-time aquarium rendered with PixiJS 8.
+- Viewer fish with names, health (HP), and attack damage (ATK).
+- Like activity controls swimming speed, using a rolling five-second activity window and gradual speed changes.
+- Every 5 accumulated likes grants +1 HP.
+- Every 100 accumulated likes increases fish size.
+- Gifts can increase health and attack damage and unlock fish appearances.
+- Fish enter smoothly from the left or right edge at varied heights.
+- Fish continue under AI control after a viewer leaves.
+- Jellyfish, reef scenery, swimming animations, and viewer comments above their fish.
+- Responsive portrait-first layout for TikTok LIVE and browser-based streaming overlays.
+- WebSocket reconnection and a server health endpoint.
+
+## Requirements
+
+- Node.js 22 or newer
+- npm
+
+## Getting started
+
+Run these commands from the repository root.
 
 ```powershell
 npm install
 Copy-Item .env.example .env
-# Добавь свой SIGN_API_KEY в .env
 npm run dev
 ```
 
-Запускай именно команду из корня репозитория: она сначала собирает `shared`, затем запускает сервер и клиент вместе. Не запускай только `npm run dev:client`, иначе WebSocket на порту 3000 не найдёт сервер.
+Add your TikTok connector signing key as `SIGN_API_KEY` in `.env` if you want to receive real LIVE events. If the environment file already exists, edit it instead of overwriting it.
 
-Vite автоматически откроет браузер с клиентом по адресу `http://localhost:5173`. Сервер работает на `http://localhost:3000`, проверка статуса: `http://localhost:3000/health`.
+The development command builds the shared package and starts the server and client together. Vite opens the client at [http://localhost:5173](http://localhost:5173). The server listens at [http://localhost:3000](http://localhost:3000), and its health endpoint is available at [http://localhost:3000/health](http://localhost:3000/health).
 
-Если файл `.env` уже существует, не перезаписывай его командой `Copy-Item`. Без `SIGN_API_KEY` интерфейс откроется, но подключение к TikTok LIVE не запустится.
+Without `SIGN_API_KEY`, the interface can still be opened locally, but the server will not connect to TikTok LIVE.
 
-## Выбор LIVE
+## Choose the TikTok LIVE account
 
-Целевой ник задаётся одной строкой в `server/src/config.ts`:
+Set the target username in `server/src/config.ts`:
 
 ```ts
-export const STREAMER_USERNAME = "playing_in.chat";
+export const STREAMER_USERNAME = "your_username";
 ```
 
-Указывай ник без `@`. Сервер подключается именно к этому аккаунту, не сканирует другие эфиры и повторяет попытку при сбое подключения. В логах при запуске выводится целевой ник, а после успешного подключения появится сообщение `Connected to @playing_in.chat` с ID комнаты.
+Use the username without the `@` prefix. The server connects to this configured account rather than searching for other live streams.
 
-## Структура
+## Project structure
 
-- `server/`: подключение TikTok, обработка событий, очки игроков, HTTP health endpoint и WebSocket.
-- `client/`: React overlay, чат, рейтинг и PixiJS-эффекты.
-- `shared/`: общие TypeScript-контракты.
+- `client/`: React interface, PixiJS aquarium scene, and visual effects.
+- `server/`: TikTok LIVE connection, event normalization, WebSocket broadcasting, and HTTP health endpoint.
+- `shared/`: shared TypeScript types, aquarium simulation, fish movement, combat, and rewards.
+- `scripts/`: local development helpers.
 
-## Команды
+## Commands
 
-| Команда | Назначение |
+| Command | Description |
 | --- | --- |
-| `npm run dev` | Запустить сервер и клиент; браузер откроется автоматически |
-| `npm run dev:server` | Запустить только сервер |
-| `npm run dev:client` | Запустить только клиент |
-| `npm run build` | Собрать все workspace-пакеты |
-| `npm run typecheck` | Проверить TypeScript во всех пакетах |
+| `npm run dev` | Build shared code and start the server and client |
+| `npm run dev:server` | Start only the server |
+| `npm run dev:client` | Start only the Vite client |
+| `npm run build` | Build all workspace packages |
+| `npm run typecheck` | Type-check all workspace packages |
+| `npm test` | Run shared package tests |
 
-Проект рассчитан на локальный запуск. Для работы не требуется Vercel или Render.
+## Deployment
+
+The repository is structured as a client/server monorepo. The client can be hosted as a static site, but live TikTok event integration also requires a running server with the required environment variables and a WebSocket connection configured for the deployment. Keep `SIGN_API_KEY` on the server and never expose it through client-side `VITE_*` variables.
+
+For a public shareable page, deploy the client and server to a hosting setup that supports the server process and WebSockets, then configure the client's `VITE_WS_URL` to point to the deployed WebSocket endpoint when the client and server use different hosts.
+
+## License
+
+No license has been specified yet.
