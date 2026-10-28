@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express from "express";
 import http from "node:http";
 import path from "node:path";
+import { mkdirSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
@@ -25,6 +27,13 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const players = new Map<string, ArenaPlayer>();
+const onlineIds = new Set<string>();
+const pendingDepartures = new Map<string, { timer: ReturnType<typeof setTimeout>; player: ArenaPlayer }>();
+const dataDirectory = process.env.DATA_DIR || path.resolve(dirname, "../../data");
+mkdirSync(dataDirectory, { recursive: true });
+const database = new DatabaseSync(process.env.AQUALIFE_DB_PATH || path.join(dataDirectory, "aqualife.sqlite"));
+database.exec("CREATE TABLE IF NOT EXISTS departed_viewers (id INTEGER PRIMARY KEY AUTOINCREMENT, unique_id TEXT NOT NULL, nickname TEXT NOT NULL, profile_picture_url TEXT NOT NULL, likes INTEGER NOT NULL DEFAULT 0, gifts INTEGER NOT NULL DEFAULT 0, comments INTEGER NOT NULL DEFAULT 0, is_following INTEGER NOT NULL DEFAULT 0, departed_at TEXT NOT NULL)");
+const saveDepartedViewer = database.prepare("INSERT INTO departed_viewers (unique_id, nickname, profile_picture_url, likes, gifts, comments, is_following, departed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 const reconnectDelay = 30_000;
 const eventQueue = new BoundedGameEventQueue(AQUALIFE_CONFIG.maxQueuedEvents, 100);
 const eventDeduplicator = new BoundedEventDeduplicator(AQUALIFE_CONFIG.maxQueuedEvents * 2);
@@ -143,7 +152,8 @@ function userId(user?: RecordData): string {
   return String(user?.uniqueId || user?.displayId || user?.userId || user?.id || "unknown");
 }
 function leaderboard(): ArenaPlayer[] {
-  return [...players.values()].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes);
+  return [...onlineIds].map(id => players.get(id)).filter((player): player is ArenaPlayer => Boolean(player))
+    .sort((a, b) => b.gifts - a.gifts || b.likes - a.likes);
 }
 function updatePlayer(
   id: string,
@@ -152,6 +162,9 @@ function updatePlayer(
   nickname: string,
   activity: { likes?: number; comments?: number; gifts?: number; isFollowing?: boolean } = {}
 ): void {
+  const pending = pendingDepartures.get(id);
+  if (pending) { clearTimeout(pending.timer); pendingDepartures.delete(id); }
+  onlineIds.add(id);
   let player = players.get(id);
   if (!player) {
     player = { uniqueId: id, nickname: nickname || id, profilePictureUrl: avatarUrl, score: 0, likes: 0, comments: 0, gifts: 0, isFollowing: false };
@@ -224,9 +237,42 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     console.log(`[tiktok] @${username}'s LIVE ended.`);
     scheduleReconnect();
   });
+  const handleViewerLeft = (data: RecordData): void => {
+    const normalized = normalizeTikTokEvent("member", data);
+    if (!normalized) return;
+    const id = userId(data.user);
+    const player = players.get(id) ?? {
+      uniqueId: id, nickname: normalized.nickname || id, profilePictureUrl: normalized.avatarUrl,
+      score: 0, likes: 0, comments: 0, gifts: 0, isFollowing: false
+    };
+    onlineIds.delete(id);
+    trackedParticipants.delete(normalized.userId);
+    const leaveEvent: NormalizedGameEvent = { ...normalized, type: "viewer-left", eventId: "viewer-left:" + normalized.userId + ":" + Date.now(), dedupeKey: null, receivedAtMs: Date.now() };
+    broadcast({ type: "aqualife_event", data: leaveEvent });
+    broadcast({ type: "update_leaderboard", data: leaderboard() });
+    const previous = pendingDepartures.get(id);
+    if (previous) clearTimeout(previous.timer);
+    const timer = setTimeout(() => {
+      try { saveDepartedViewer.run(player.uniqueId, player.nickname, player.profilePictureUrl, player.likes, player.gifts, player.comments, player.isFollowing ? 1 : 0, new Date().toISOString()); }
+      catch (error) { console.error("[sqlite] Could not persist departed viewer:", redact(error)); }
+      pendingDepartures.delete(id);
+      players.delete(id);
+    }, 30_000);
+    pendingDepartures.set(id, { timer, player: { ...player } });
+  };
+
+  const isLeaveSignal = (data: RecordData): boolean => {
+    const values = [data.action, data.actionType, data.event, data.eventType, data.type, data.userAction];
+    return values.some(value => typeof value === "string" && /^(leave|left|exit|exited|disconnect|disconnected)$/i.test(value.trim()));
+  };
+
   onConnectorEvent(WebcastEvent.MEMBER, (data: RecordData) => {
-    ingestEvent("member", data);
+    if (isLeaveSignal(data)) { handleViewerLeft(data); return; }
+    const event = ingestEvent("member", data);
+    if (event) updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname);
   });
+  const leaveEventName = (WebcastEvent as unknown as Record<string, string>).LEAVE;
+  if (leaveEventName) onConnectorEvent(leaveEventName, (data: RecordData) => handleViewerLeft(data));
   onConnectorEvent(WebcastEvent.CHAT, (data: RecordData) => {
     const event = ingestEvent("chat", data);
     if (!event) return;
@@ -331,6 +377,9 @@ function shutdown(): void {
   shuttingDown = true;
   if (reconnectTimer) clearTimeout(reconnectTimer);
   clearInterval(eventFlushTimer);
+  for (const departure of pendingDepartures.values()) clearTimeout(departure.timer);
+  pendingDepartures.clear();
+  database.close();
   const connection = tiktok;
   tiktok = undefined;
   if (connection) void connection.disconnect();
