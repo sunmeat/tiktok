@@ -104,3 +104,22 @@ For each meaningful gameplay/rendering change:
 ## Agreed game rules
 
 The actual gameplay rules will be recorded here as they are supplied and confirmed. Do not invent missing scoring, win/lose, spawn, movement, collision, or round-reset rules. If a rule is ambiguous and would affect architecture or behavior, ask one focused question before implementing it.
+
+
+## Confirmed AquaLife gameplay rules
+
+These rules were confirmed by the project owner and should be treated as implementation requirements:
+
+- AquaLife is the primary game in this TikTok LIVE overlay project. Preserve existing chat, gift, subscription, connection, and server-status functionality.
+- A new fish starts with 5 HP. Maximum HP is unlimited; do not introduce a gameplay cap on HP, because ongoing engagement and gifts should continue to matter. Avoid unsafe numeric overflow in implementation without imposing an arbitrary gameplay limit.
+- Every full 5 accumulated likes grants +1 HP. Count likes cumulatively across events and preserve the remainder, preventing lost progress when likes arrive in separate events.
+- A fish eaten by a larger fish disappears from the aquarium scene and respawns after 5 seconds. On respawn it keeps its fish species/appearance and swims in from beyond the screen boundary toward the aquarium center.
+- Appearance persistence: default fish are gray; a subscription changes the fish to the Dory appearance; gifts can unlock one of 10 additional fish appearances. A fish retains its unlocked/current appearance through death and respawn. The precedence between subscription appearance and gift-unlocked species still needs to be clarified.
+- The aquarium is continuous, with no automatic round end. One fish dying does not end the game.
+- Base bite damage is 1 HP; jellyfish collision damage is 1 HP.
+- Movement speed is based on likes per second. The agreed reference points are 5 likes/s = 3 px/s, 10 likes/s = 6 px/s, and 15 likes/s = 9 px/s. The initial linear mapping is 0.6 px/s per like/s, based on a smoothed rolling activity window rather than individual event spikes. Tune the window and minimum speed during testing; do not claim the exact feel is validated until tested.
+- If a viewer leaves, their fish remains in the aquarium under AI control. Active-viewer count and total living fish count must be tracked separately.
+- Entry events may be delayed or unavailable for some viewers. Do not invent individual viewers from the total viewer count; create/associate a fish only when the connector provides a sufficiently identifiable event.
+- For re-entry, the recommended behavior is to reclaim an existing living AI-controlled fish instead of creating a duplicate, but this specific rule still needs owner confirmation.
+- The precise size threshold for eating, attack cooldown/target selection, maximum fish size, reset behavior for stats other than appearance, and exact fish-appearance precedence remain open decisions. Do not invent final rules for these.
+
