@@ -84,7 +84,7 @@ function Arena() {
           <div className="rank">{String(index+1).padStart(2,"0")}</div>
           <Avatar src={player.profilePictureUrl} className="player-avatar" />
           <div className="player-main">
-            <div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span>{player.isFollowing && <span className="follow-badge">✓ FOLLOW</span>}</div>
+            <div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname.length > 8 ? `${player.nickname.slice(0, 7)}...` : player.nickname}</span>{player.isFollowing && <span className="follow-badge">✓ FOLLOW</span>}</div>
             <div className="stats"><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b></span><span>♥ <b>{player.likes.toLocaleString("en-US")}</b></span></div>
           </div>
         </article>)}
