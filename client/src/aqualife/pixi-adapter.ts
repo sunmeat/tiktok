@@ -132,7 +132,7 @@ export class AquaLifePixiAdapter {
       }
       const bodyScale = Math.max(0.2, fish.size);
       view.shadow.scale.set(bodyScale, bodyScale);
-      const label = `${fish.nickname} · HP ${fish.hp}`;
+      const label = `${fish.nickname} · ❤️ ${fish.hp}`;
       if (label !== view.lastLabel) {
         view.label.text = label;
         view.lastLabel = label;
@@ -368,7 +368,7 @@ export class AquaLifePixiAdapter {
     const body = new Graphics();
     this.drawFishTail(tail, fish.species);
     this.drawFishBody(body, fish.species);
-    const label = new Text({ text: `${fish.nickname} · HP ${fish.hp}`, style: this.labelStyle });
+    const label = new Text({ text: `${fish.nickname} · ❤️ ${fish.hp}`, style: this.labelStyle });
     label.anchor.set(0.5, 0);
     const comment = new Text({ text: "", style: this.commentStyle });
     comment.anchor.set(0.5, 1);
