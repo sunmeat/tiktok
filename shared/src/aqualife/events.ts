@@ -27,7 +27,7 @@ export function normalizeTikTokEvent(
 ): NormalizedGameEvent | null {
   const data = record(payload);
   const user = record(data.user ?? data);
-  const userId = stringValue(user.uniqueId, user.displayId, user.userId, user.id, data.uniqueId);
+  // Prefer provider identifiers that are not display names; usernames are the fallback only.\n  const userId = stringValue(user.userId, user.id, user.secUid, user.uniqueId, user.displayId, data.userId, data.uniqueId);
   if (!userId || userId.toLowerCase() === "unknown") return null;
 
   const avatar = record(user.profilePicture);
@@ -38,25 +38,24 @@ export function normalizeTikTokEvent(
     record(user.avatarThumb).urlList instanceof Array ? (record(user.avatarThumb).urlList as unknown[])[0] : undefined
   );
   const nickname = stringValue(user.nickname, user.uniqueId, userId);
-  const eventId = stringValue(data.msgId, data.messageId, data.id) ||
-    `${kind}:${userId}:${receivedAtMs}:${Math.random().toString(36).slice(2)}`;
+  const providerEventId = stringValue(data.msgId, data.messageId, data.eventId);\n  const dedupeKey = providerEventId ? `${kind}:${providerEventId}` : null;\n  // Without a provider ID, keep a unique diagnostic ID but do not pretend it can deduplicate delivery.\n  const eventId = dedupeKey ?? `untracked:${kind}:${userId}:${receivedAtMs}`;
 
-  if (kind === "member") return { type: "viewer-joined", eventId, userId, nickname, avatarUrl, receivedAtMs };
+  if (kind === "member") return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
   if (kind === "like") {
-    return { type: "like", eventId, userId, nickname, avatarUrl, receivedAtMs, count: safeCount(data.likeCount ?? data.count) };
+    return { type: "like", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, count: safeCount(data.likeCount ?? data.count) };
   }
-  if (kind === "follow") return { type: "follow", eventId, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
-  if (kind === "subscribe") return { type: "subscribe", eventId, userId, nickname, avatarUrl, receivedAtMs };
+  if (kind === "follow") return { type: "follow", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
+  if (kind === "subscribe") return { type: "subscribe", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
   if (kind === "gift") {
     return {
-      type: "gift", eventId, userId, nickname, avatarUrl, receivedAtMs,
+      type: "gift", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs,
       count: safeCount(data.repeatCount),
       giftId: Number.isFinite(Number(data.giftId)) ? Number(data.giftId) : undefined,
       giftName: stringValue(data.giftName, record(data.giftDetails).giftName, record(data.gift).name) || "подарок"
     };
   }
   return {
-    type: "chat", eventId, userId, nickname, avatarUrl, receivedAtMs,
+    type: "chat", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs,
     comment: stringValue(data.comment, data.content)
   };
 }
