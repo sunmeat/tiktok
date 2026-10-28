@@ -17,7 +17,7 @@ function killFishOnce(target: AquaLifeFish, nowMs: number, config: AquaLifeConfi
   return { hit: true, killed: true, respawnAtMs: target.respawnAtMs };
 }
 
-/** A larger fish can bite a smaller fish only inside its size-scaled attack radius and off cooldown. */
+/** A fish can bite a fish of equal or smaller size inside its size-scaled attack radius and off cooldown. */
 export function resolveFishBite(
   attacker: AquaLifeFish,
   target: AquaLifeFish,
@@ -78,10 +78,11 @@ export function resolveJellyfishCollision(
 }
 
 /** Respawn reuses the same fish entity and keeps its elite appearance and progression. */
-export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: number): boolean {
+export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: number, config: AquaLifeConfig = AQUALIFE_CONFIG): boolean {
   if (fish.status !== "dead" || fish.respawnAtMs === null || nowMs < fish.respawnAtMs) return false;
   fish.status = "respawning";
-  fish.hp = Math.max(1, fish.hp);
+  fish.hp = config.initialHp;
+  fish.lastDamageTaken = 0;
   const spawnOffset = Math.max(20, fish.size * 20);
   const fromLeft = Math.random() < 0.5;
   const entryAngle = (Math.random() - 0.5) * 0.7;
