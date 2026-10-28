@@ -159,7 +159,7 @@ export function deactivateParticipant(state: AquaLifeGameState, userId: string):
   if (!participant) return false;
   participant.isActive = false;
   const fish = state.fish[userId];
-  if (fish) { fish.isAiControlled = true; fish.leaveAtMs = state.nowMs + 30_000; }
+  if (fish) { fish.isAiControlled = true; fish.leaveAtMs = state.nowMs + 1_000; }
   recalculateCounts(state);
   return true;
 }
@@ -314,7 +314,7 @@ export function stepAquaLife(
       const travel = respawnSpeed * boundedDelta / 1000;
       fish.x += fish.directionX * travel;
       fish.y += fish.directionY * travel;
-      const margin = Math.max(12, fish.size * 12);
+      const margin = Math.max(12, fish.size * 2);
       fish.y = Math.max(margin, Math.min(state.world.height - margin, fish.y));
       // Steady, calm entry: constant speed, a gentle continuous tail beat, no waypoint yet.
       fish.currentSpeedPxPerSecond = respawnSpeed;
@@ -407,7 +407,7 @@ export function createAquaLifeRenderSnapshot(state: AquaLifeGameState, config: A
       attackDamage: fish.attackDamage,
       status: fish.status,
       alpha: Math.min(
-        fish.leaveAtMs === null ? 1 : Math.max(0, Math.min(1, (fish.leaveAtMs - state.nowMs) / 1_200)),
+        fish.leaveAtMs === null ? 1 : Math.max(0, Math.min(1, (fish.leaveAtMs - state.nowMs) / 1_000)),
         fish.status === "dead"
           ? (fish.respawnAtMs === null
             ? 0
