@@ -1,4 +1,7 @@
 import "dotenv/config";
+import dotenv from "dotenv";
+// Workspace scripts run from /server; also load the repository-root .env as a fallback.
+dotenv.config({ path: "../.env", override: false });
 import express from "express";
 import http from "node:http";
 import path from "node:path";
