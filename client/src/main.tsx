@@ -81,6 +81,10 @@ function Arena() {
         </article>)}
       </div>
     </section>
+    <section className="panel aquarium-panel">
+      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 03</div><h2>АКВАРИУМ</h2><div className="rank-caption">Живая симуляция · события LIVE</div></div><Status online={serverOnline} onlineText="СИМУЛЯЦИЯ" offlineText="ОЖИДАНИЕ" /></header>
+      <AquaLifeScene eventsRef={aquaEventsRef} />
+    </section>
     <aside className="panel leaderboard">
       <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 02</div><h2>🏆 РЕЙТИНГ АРЕНЫ</h2><div className="rank-caption">@{username} · зрители и активность</div></div><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
       <div className="players-list">
