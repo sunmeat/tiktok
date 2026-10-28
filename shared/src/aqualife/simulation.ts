@@ -91,7 +91,7 @@ export function createFishForParticipant(
     targetDirectionX: Math.cos(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
     targetDirectionY: Math.sin(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
     wanderTimeRemaining: 1 + ((state.nextEntityNumber - 1) % 7) * 0.35,
-    turnRateRadiansPerSecond: 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3,
+    turnRateRadiansPerSecond: Math.min(config.maxTurnRateRadiansPerSecond, 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3),
     speedTargetPxPerSecond: config.baseSpeedPxPerSecond,
     lastSpeedUpdateAtMs: state.nowMs,
     baseSpeedPxPerSecond: config.baseSpeedPxPerSecond,
