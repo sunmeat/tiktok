@@ -1,7 +1,7 @@
 import { AQUALIFE_CONFIG, type AquaLifeConfig } from "./config.js";
 import { updateFishMovement, type RandomSource } from "./ai.js";
 import { respawnFish } from "./combat.js";
-import { applyLikeReward } from "./rewards.js";
+import { applyLikeReward, updateLikeActivitySpeed } from "./rewards.js";
 import type { AquaLifeFish, AquaLifeGameState, AquaLifeParticipant, NormalizedGameEvent } from "./types.js";
 
 export function createAquaLifeState(
@@ -17,6 +17,7 @@ export function createAquaLifeState(
     activeParticipantCount: 0,
     livingFishCount: 0,
     nextEntityNumber: 1,
+    processedEventIds: [],
     nowMs
   };
 }
@@ -79,6 +80,9 @@ export function processGameEvent(
   event: NormalizedGameEvent,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): void {
+  if (!event.eventId || state.processedEventIds.includes(event.eventId)) return;
+  state.processedEventIds.push(event.eventId);
+  if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();
   if (event.type === "viewer-left") {
     const participant = state.participants[event.userId];
     if (participant?.isActive) {
@@ -126,6 +130,7 @@ export function stepAquaLife(
   const boundedDelta = Math.max(0, Math.min(deltaMs, 250));
   state.nowMs = nowMs;
   for (const fish of Object.values(state.fish)) {
+    updateLikeActivitySpeed(fish, nowMs);
     if (fish.status === "dead") {
       if (respawnFish(fish, state.world, nowMs)) fish.status = "respawning";
       continue;
