@@ -79,10 +79,14 @@ export function respawnFish(fish: AquaLifeFish, world: AquaLifeWorld, nowMs: num
   fish.hp = Math.max(1, fish.hp);
   const spawnOffset = Math.max(20, fish.size * 20);
   const fromLeft = Math.random() < 0.5;
+  const entryAngle = (Math.random() - 0.5) * 0.7;
   fish.x = fromLeft ? -spawnOffset : world.width + spawnOffset;
-  fish.y = world.height * (0.08 + Math.random() * 0.84);
-  fish.directionX = fromLeft ? 1 : -1;
-  fish.directionY = 0;
+  fish.y = world.height * (0.18 + Math.random() * 0.64);
+  fish.directionX = (fromLeft ? 1 : -1) * Math.cos(entryAngle);
+  fish.directionY = Math.sin(entryAngle);
+  fish.targetDirectionX = fish.directionX;
+  fish.targetDirectionY = fish.directionY;
+  fish.wanderTimeRemaining = 2 + Math.random() * 5;
   fish.attackCooldownUntilMs = nowMs;
   fish.attackAnimationUntilMs = 0;
   fish.lastHurtAtMs = null;
