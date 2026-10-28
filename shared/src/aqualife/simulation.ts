@@ -87,6 +87,12 @@ export function createFishForParticipant(
     y: state.world.height / 2,
     directionX: 1,
     directionY: 0,
+    targetDirectionX: Math.cos(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
+    targetDirectionY: Math.sin(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
+    wanderTimeRemaining: 1 + ((state.nextEntityNumber - 1) % 7) * 0.35,
+    turnRateRadiansPerSecond: 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3,
+    individualSpeedMultiplier: 0.9 + ((state.nextEntityNumber - 1) % 7) * 0.033,
+    speedTargetPxPerSecond: config.baseSpeedPxPerSecond,
     baseSpeedPxPerSecond: config.baseSpeedPxPerSecond,
     speedPxPerSecond: config.baseSpeedPxPerSecond,
     baseSize: config.baseFishSize,
@@ -243,7 +249,7 @@ export function stepAquaLife(
       continue;
     }
     if (fish.status === "spawning") fish.status = "swimming";
-    updateFishMovement(fish, state.world, boundedDelta / 1000, random);
+    updateFishMovement(fish, state.world, boundedDelta / 1000, random, Object.values(state.fish), config);
   }
   recalculateCounts(state);
 }
