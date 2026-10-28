@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
-import type { ArenaPlayer, ChatMessage, GiftAlert, NormalizedGameEvent, ServerMessage } from "@tiktok-arena/shared";
+import type { ArenaPlayer, GiftAlert, NormalizedGameEvent, ServerMessage } from "@tiktok-arena/shared";
 import { AquaLifeScene } from "./aqualife/AquaLifeScene.js";
 import "./styles.css";
 
@@ -9,22 +9,14 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
-  const [chat, setChat] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("tiktok-live-arena-chat-v1") || "[]");
-      return Array.isArray(saved) ? saved.slice(-300) as ChatMessage[] : [];
-    } catch { return []; }
-  });
   const [gift, setGift] = useState<GiftAlert | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
   const [tiktokOnline, setTiktokOnline] = useState(false);
   const [username, setUsername] = useState("playing_in.chat");
-  const chatRef = useRef<HTMLDivElement>(null);
   const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
     if (message.type === "init" || message.type === "update_leaderboard") setPlayers(message.data);
-    if (message.type === "chat_message") setChat(old => [...old.slice(-299), message.data]);
     if (message.type === "gift_alert") setGift(message.data);
     if (message.type === "aqualife_event") {
       aquaEventsRef.current.push(message.data);
@@ -63,37 +55,23 @@ function Arena() {
     return () => { disposed = true; window.clearTimeout(timer); socket?.close(); };
   }, []);
 
-  useEffect(() => {
-    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [chat]);
-
   const ranked = useMemo(() => [...players].sort((a, b) => b.score - a.score).slice(0, 10), [players]);
 
   return <main className="arena">
     <PixiEffects gift={gift} />
-    <section className="panel chat-panel">
-      <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 01</div><h1>ПОТОК СОБЫТИЙ</h1></div><Status online={serverOnline} onlineText="SERVER ONLINE" offlineText="RECONNECTING" /></header>
-      <div className="chat-feed" ref={chatRef}>
-        {!chat.length && <div className="empty"><strong>Канал готов к эфиру</strong>Сообщения зрителей появятся здесь в реальном времени.</div>}
-        {chat.map((item, index) => <article className="chat-message" key={`${item.timestamp}-${item.uniqueId}-${index}`}>
-          <Avatar src={item.avatarUrl} className="chat-avatar" />
-          <div><div className="chat-meta"><span className="chat-name">{item.nickname}</span><time>{new Date(item.timestamp).toLocaleTimeString("ru-RU", {hour:"2-digit",minute:"2-digit"})}</time></div><div className="chat-text">{item.comment}</div></div>
-        </article>)}
-      </div>
-    </section>
     <section className="panel aquarium-panel">
-      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 03</div><h2>АКВАРИУМ</h2><div className="rank-caption">Живая симуляция · события LIVE</div></div><Status online={serverOnline} onlineText="СИМУЛЯЦИЯ" offlineText="ОЖИДАНИЕ" /></header>
+      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 01</div><h2>LIVE AQUARIUM</h2><div className="rank-caption">Real-time reef simulation</div></div><Status online={serverOnline} onlineText="SIMULATION LIVE" offlineText="WAITING FOR LIVE" /></header>
       <AquaLifeScene eventsRef={aquaEventsRef} />
     </section>
     <aside className="panel leaderboard">
-      <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 02</div><h2>🏆 РЕЙТИНГ АРЕНЫ</h2><div className="rank-caption">@{username} · зрители и активность</div></div><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
+      <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 02</div><h2>🏆 LIVE LEADERBOARD</h2><div className="rank-caption">@{username} · viewer activity</div></div><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
       <div className="players-list">
-        {!ranked.length && <div className="empty">Ожидаем первых зрителей…</div>}
+        {!ranked.length && <div className="empty">Waiting for the first viewers…</div>}
         {ranked.map((player,index) => <article className={`player-card rank-${index+1}`} key={player.uniqueId}>
           <div className="rank">{String(index+1).padStart(2,"0")}</div><Avatar src={player.profilePictureUrl} className="player-avatar" />
-          <div className="player-main"><div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "НЕ ПОДПИСАН"}</span></div>
-            <div className="player-score">✦ {player.score.toLocaleString("ru-RU")} очков</div>
-            <div className="stats"><span>♥ <b>{player.likes.toLocaleString("ru-RU")}</b> лайков</span><span>▤ <b>{player.comments.toLocaleString("ru-RU")}</b> комм.</span><span>🎁 <b>{player.gifts.toLocaleString("ru-RU")}</b> подарков</span></div>
+          <div className="player-main"><div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "NOT FOLLOWING"}</span></div>
+            <div className="player-score">✦ {player.score.toLocaleString("en-US")} очков</div>
+            <div className="stats"><span>♥ <b>{player.likes.toLocaleString("en-US")}</b> лайков</span><span>▤ <b>{player.comments.toLocaleString("en-US")}</b> комм.</span><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b> подарков</span></div>
           </div>
         </article>)}
       </div>
