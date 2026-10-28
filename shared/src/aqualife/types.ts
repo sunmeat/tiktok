@@ -117,6 +117,7 @@ export interface FishRenderModel {
   size: number;
   hp: number;
   maxHp: number | null;
+  attackDamage: number;
   status: FishStatus;
   rewardFeedback: "activity" | "heal" | "growth" | null;
   combatFeedback: "attack" | "hurt" | null;
