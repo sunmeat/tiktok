@@ -81,6 +81,10 @@ export function createFishForParticipant(
     return existing;
   }
   if (Object.keys(state.fish).length >= config.maxFish) return null;
+  const spawnFromLeft = Math.random() < 0.5;
+  const spawnAngle = (Math.random() - 0.5) * 0.7;
+  const spawnDirectionX = (spawnFromLeft ? 1 : -1) * Math.cos(spawnAngle);
+  const spawnDirectionY = Math.sin(spawnAngle);
   const fish: AquaLifeFish = {
     id: `fish-${state.nextEntityNumber++}`,
     participantId: participant.userId,
@@ -88,12 +92,12 @@ export function createFishForParticipant(
     avatarUrl: participant.avatarUrl,
     species: preferredSpecies,
     status: "respawning",
-    x: Math.random() < 0.5 ? -Math.max(20, config.baseFishSize * 20) : state.world.width + Math.max(20, config.baseFishSize * 20),
-    y: state.world.height * (0.08 + Math.random() * 0.84),
-    directionX: Math.random() < 0.5 ? 1 : -1,
-    directionY: 0,
-    targetDirectionX: Math.cos(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
-    targetDirectionY: Math.sin(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
+    x: spawnFromLeft ? -Math.max(20, config.baseFishSize * 20) : state.world.width + Math.max(20, config.baseFishSize * 20),
+    y: state.world.height * (0.18 + Math.random() * 0.64),
+    directionX: spawnDirectionX,
+    directionY: spawnDirectionY,
+    targetDirectionX: spawnDirectionX,
+    targetDirectionY: spawnDirectionY,
     wanderTimeRemaining: 1 + ((state.nextEntityNumber - 1) % 7) * 0.35,
     turnRateRadiansPerSecond: Math.min(config.maxTurnRateRadiansPerSecond, 1.2 + ((state.nextEntityNumber - 1) % 5) * 0.3),
     speedTargetPxPerSecond: config.baseSpeedPxPerSecond,
@@ -275,25 +279,17 @@ export function stepAquaLife(
       continue;
     }
     if (fish.status === "respawning") {
-      const targetX = state.world.width / 2;
-      const targetY = state.world.height / 2;
-      const dx = targetX - fish.x;
-      const dy = targetY - fish.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 8) fish.status = "swimming";
-      else {
-        fish.directionX = dx / (distance || 1);
-        fish.directionY = dy / (distance || 1);
-        // Fish drift in from beyond the edge at a calm, steady pace.
-        // Like activity only changes their swimming speed after they enter the aquarium.
-        const respawnSpeed = 28;
-        const travel = Math.min(distance, respawnSpeed * boundedDelta / 1000);
-        fish.x += fish.directionX * travel;
-        fish.y += fish.directionY * travel;
-        if (distance <= travel + 0.5) {
-          fish.status = "swimming";
-          fish.wanderTimeRemaining = 0;
-        }
+      // Enter from a side at a shallow, slightly different angle, then start wandering.
+      // No target is set at the center; likes affect speed only after entry.
+      const respawnSpeed = 28;
+      const travel = respawnSpeed * boundedDelta / 1000;
+      fish.x += fish.directionX * travel;
+      fish.y += fish.directionY * travel;
+      const margin = Math.max(12, fish.size * 12);
+      fish.y = Math.max(margin, Math.min(state.world.height - margin, fish.y));
+      if (fish.x >= margin && fish.x <= state.world.width - margin) {
+        fish.status = "swimming";
+        fish.wanderTimeRemaining = 2 + random() * 5;
       }
       continue;
     }
