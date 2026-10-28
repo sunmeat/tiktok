@@ -19,7 +19,9 @@ function safePositiveCount(value: unknown, fallback: number | null = null): numb
   if (typeof value === "string" && !value.trim()) return fallback;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return Math.min(1_000_000, Math.floor(parsed));
+  const integer = Math.floor(parsed);
+  if (integer < 1) return fallback;
+  return Math.min(1_000_000, integer);
 }
 
 function profileAvatar(user: UnknownRecord): string {
