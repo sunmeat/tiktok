@@ -4,6 +4,7 @@ import {
   BoundedEventDeduplicator,
   BoundedGameEventQueue,
   AQUALIFE_CONFIG,
+  addJellyfish,
   createAquaLifeState,
   createAquaLifeRenderSnapshot,
   normalizeTikTokEvent,
@@ -497,4 +498,31 @@ test("simulation automatically selects the nearest smaller fish and updates HP",
   const snapshot = createAquaLifeRenderSnapshot(state);
   assert.equal(snapshot.fish.find(fish => fish.id === hunter.id)?.combatFeedback, "attack");
   assert.equal(snapshot.fish.find(fish => fish.id === prey.id)?.combatFeedback, "hurt");
+});
+
+
+test("jellyfish are normalized, move in the simulation and remain inside the aquarium", () => {
+  const state = createAquaLifeState(100, 120);
+  assert.equal(addJellyfish(state, {
+    id: "jelly-moving",
+    x: 98,
+    y: 60,
+    directionX: 4,
+    directionY: 0,
+    speedPxPerSecond: 20,
+    size: 5
+  }), true);
+  const jellyfish = state.jellyfish["jelly-moving"];
+  assert.equal(jellyfish.directionX, 1);
+  assert.equal(jellyfish.directionY, 0);
+
+  stepAquaLife(state, 250, 250, () => 0.5);
+  assert.ok(jellyfish.x >= 0 && jellyfish.x <= state.world.width);
+  assert.ok(jellyfish.y >= 0 && jellyfish.y <= state.world.height);
+  assert.ok(jellyfish.directionX < 0, "jellyfish reflects when it reaches the right edge");
+  assert.equal(addJellyfish(state, {
+    id: "jelly-moving", x: 10, y: 10,
+    directionX: 0, directionY: 0, speedPxPerSecond: 0, size: 0
+  }), true, "updating an existing jellyfish does not consume another slot");
+  assert.equal(state.jellyfish["jelly-moving"].speedPxPerSecond, AQUALIFE_CONFIG.jellyfishBaseSpeedPxPerSecond);
 });
