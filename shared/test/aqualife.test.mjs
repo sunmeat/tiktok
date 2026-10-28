@@ -634,7 +634,8 @@ test("respawning fish continue moving even when they have no recent likes", () =
 
   stepAquaLife(state, 50, 1_000, () => 0.5);
   assert.equal(fish.status, "respawning");
-  const initialY = fish.y;
+  const initialDistance = Math.hypot(state.world.width / 2 - fish.x, state.world.height / 2 - fish.y);
   stepAquaLife(state, 50, 1_050, () => 0.5);
-  assert.ok(fish.y > initialY, "idle fish should travel toward the tank instead of crawling in place");
+  const nextDistance = Math.hypot(state.world.width / 2 - fish.x, state.world.height / 2 - fish.y);
+  assert.ok(nextDistance < initialDistance, "respawning fish should enter from an edge and move toward the tank center");
 });
