@@ -278,8 +278,16 @@ export function stepAquaLife(
       else {
         fish.directionX = dx / (distance || 1);
         fish.directionY = dy / (distance || 1);
-        fish.x += fish.directionX * Math.max(1, fish.speedPxPerSecond) * boundedDelta / 1000;
-        fish.y += fish.directionY * Math.max(1, fish.speedPxPerSecond) * boundedDelta / 1000;
+        // Respawn travel must not depend on like activity: otherwise an idle fish
+        // can crawl a fraction of a pixel per frame and appear frozen at center.
+        const respawnSpeed = Math.max(24, fish.baseSpeedPxPerSecond + fish.speedPxPerSecond);
+        const travel = Math.min(distance, respawnSpeed * boundedDelta / 1000);
+        fish.x += fish.directionX * travel;
+        fish.y += fish.directionY * travel;
+        if (distance <= travel + 0.5) {
+          fish.status = "swimming";
+          fish.wanderTimeRemaining = 0;
+        }
       }
       continue;
     }
