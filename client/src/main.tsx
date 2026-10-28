@@ -8,7 +8,12 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
-  const [chat, setChat] = useState<ChatMessage[]>(() => {\n    try {\n      const saved = JSON.parse(localStorage.getItem("tiktok-live-arena-chat-v1") || "[]");\n      return Array.isArray(saved) ? saved.slice(-300) as ChatMessage[] : [];\n    } catch { return []; }\n  });
+  const [chat, setChat] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("tiktok-live-arena-chat-v1") || "[]");
+      return Array.isArray(saved) ? saved.slice(-300) as ChatMessage[] : [];
+    } catch { return []; }
+  });
   const [gift, setGift] = useState<GiftAlert | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
   const [tiktokOnline, setTiktokOnline] = useState(false);
