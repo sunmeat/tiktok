@@ -8,6 +8,8 @@ import {
   createAquaLifeRenderSnapshot,
   normalizeTikTokEvent,
   processGameEvent,
+  resolveFishBite,
+  resolveJellyfishCollision,
   stepAquaLife
 } from "../dist/index.js";
 
@@ -371,4 +373,99 @@ test("render snapshots expose short reward feedback without recreating fish view
   assert.ok(fish);
   assert.equal(fish.rewardFeedback, "growth");
   assert.equal(snapshot.nowMs, state.nowMs);
+});
+
+
+test("fish bites use size-aware range, choose smaller targets and obey cooldown", () => {
+  const state = createAquaLifeState();
+  const join = (userId, msgId) => normalizeTikTokEvent("member", {
+    msgId, user: { userId, nickname: userId }
+  }, 1_000);
+  const bigJoin = join("big-fish", "big-join");
+  const smallJoin = join("small-fish", "small-join");
+  assert.ok(bigJoin && smallJoin);
+  processGameEvent(state, bigJoin);
+  processGameEvent(state, smallJoin);
+  const big = state.fish["big-fish"];
+  const small = state.fish["small-fish"];
+  big.size = 2;
+  big.x = 100;
+  big.y = 100;
+  small.size = 1;
+  small.x = 145;
+  small.y = 100;
+
+  const first = resolveFishBite(big, small, 2_000);
+  assert.equal(first.hit, true);
+  assert.equal(first.killed, false);
+  assert.equal(small.hp, 4);
+  assert.equal(big.status, "attacking");
+  assert.equal(resolveFishBite(big, small, 2_500).hit, false, "cooldown blocks rapid repeat bites");
+  assert.equal(small.hp, 4);
+
+  small.x = 300;
+  assert.equal(resolveFishBite(big, small, 3_100).hit, false, "out-of-range target is not hit");
+  assert.equal(small.hp, 4);
+});
+
+test("a lethal bite starts death exactly once and respawn preserves species and size", () => {
+  const state = createAquaLifeState();
+  const makeJoin = (userId, msgId) => normalizeTikTokEvent("member", {
+    msgId, user: { userId, nickname: userId }
+  }, 1_000);
+  const attackerEvent = makeJoin("elite-attacker", "elite-join");
+  const targetEvent = makeJoin("one-hp-target", "target-join");
+  assert.ok(attackerEvent && targetEvent);
+  processGameEvent(state, attackerEvent);
+  processGameEvent(state, targetEvent);
+  const attacker = state.fish["elite-attacker"];
+  const target = state.fish["one-hp-target"];
+  attacker.size = 2;
+  attacker.x = 200;
+  attacker.y = 200;
+  target.size = 1;
+  target.x = 220;
+  target.y = 200;
+  target.hp = 1;
+  target.species = "gift-7";
+  target.size = 1.37;
+
+  const death = resolveFishBite(attacker, target, 4_000);
+  assert.equal(death.killed, true);
+  assert.equal(target.status, "dead");
+  assert.equal(target.hp, 0);
+  assert.equal(target.respawnAtMs, 9_000);
+  const repeated = resolveFishBite(attacker, target, 4_100);
+  assert.equal(repeated.hit, false);
+  assert.equal(target.respawnAtMs, 9_000);
+
+  stepAquaLife(state, 50, 9_000, () => 0.5);
+  assert.equal(target.status, "respawning");
+  assert.equal(target.hp, 1);
+  assert.equal(target.species, "gift-7");
+  assert.equal(target.size, 1.37);
+});
+
+test("jellyfish damage is one HP and contact damage has a cooldown", () => {
+  const state = createAquaLifeState();
+  const event = normalizeTikTokEvent("member", {
+    msgId: "jelly-target-join", user: { userId: "jelly-target", nickname: "Target" }
+  }, 1_000);
+  assert.ok(event);
+  processGameEvent(state, event);
+  const fish = state.fish["jelly-target"];
+  fish.x = 100;
+  fish.y = 100;
+  const jellyfish = {
+    id: "jelly-1", x: 100, y: 100,
+    directionX: 1, directionY: 0, speedPxPerSecond: 34, size: 8
+  };
+
+  const first = resolveJellyfishCollision(fish, jellyfish, 2_000);
+  assert.equal(first.hit, true);
+  assert.equal(fish.hp, 4);
+  assert.equal(resolveJellyfishCollision(fish, jellyfish, 2_500).hit, false);
+  assert.equal(fish.hp, 4);
+  assert.equal(resolveJellyfishCollision(fish, jellyfish, 2_950).hit, true);
+  assert.equal(fish.hp, 3);
 });
