@@ -1,64 +1,46 @@
 # TikTok Live Arena
 
-TypeScript monorepo for a real-time TikTok LIVE overlay. The Node.js server owns the TikTok connection and WebSocket stream; the React/Vite client is a reconnectable, transparent OBS Browser Source with PixiJS gift effects.
+Локальный TypeScript-монорепозиторий для интерактивного TikTok LIVE overlay. Сервер подключается к выбранному LIVE и передаёт события в React-клиент по WebSocket. Клиент отображает чат, рейтинг зрителей и эффекты подарков.
 
-## Architecture
+## Локальный запуск
 
-```text
-TikTok LIVE -> tiktok-live-connector -> server/ (Node.js + TypeScript + Express + ws)
-                                           |
-                                      typed WebSocket
-                                           v
-                           client/ (React + TypeScript + Vite + PixiJS)
-                                           ^ 
-                                      shared/ contracts
-```
-
-## Quick start
-
-Requirements: Node.js 22+ and npm.
+Требования: Node.js 22+ и npm.
 
 ```powershell
 npm install
 Copy-Item .env.example .env
+# Добавь свой SIGN_API_KEY в .env
 npm run dev
 ```
 
-The client runs at `http://localhost:5173`; the backend runs at `http://localhost:3000`. Without `SIGN_API_KEY`, the interface remains available but TikTok connection and stream discovery are disabled.
+Vite автоматически откроет браузер с клиентом по адресу `http://localhost:5173`. Сервер работает на `http://localhost:3000`, проверка статуса: `http://localhost:3000/health`.
 
-## Choosing a test stream
+Если файл `.env` уже существует, не перезаписывай его командой `Copy-Item`. Без `SIGN_API_KEY` интерфейс откроется, но подключение к TikTok LIVE не запустится.
 
-Edit just one line in `server/src/config.ts`:
+## Выбор LIVE
+
+Целевой ник задаётся одной строкой в `server/src/config.ts`:
 
 ```ts
-export const STREAMER_USERNAME = "alex.stream.games";
+export const STREAMER_USERNAME = "putevoy_tyt";
 ```
 
-Put the username of any streamer whose LIVE is currently running. Use the same line for your own stream or someone else's; omit the `@` prefix. The server connects directly to that username and retries if the connection drops. It does not scan for streams or filter by viewer count.
+Указывай ник без `@`. Сервер подключается именно к этому аккаунту, не сканирует другие эфиры и повторяет попытку при сбое подключения. В логах при запуске выводится целевой ник, а после успешного подключения появится сообщение `Connected to @putevoy_tyt` с ID комнаты.
 
-A `SIGN_API_KEY` is required by this project's current server configuration. Set it in the root `.env` file and keep it out of Git.
+## Структура
 
-## Workspaces
+- `server/`: подключение TikTok, обработка событий, очки игроков, HTTP health endpoint и WebSocket.
+- `client/`: React overlay, чат, рейтинг и PixiJS-эффекты.
+- `shared/`: общие TypeScript-контракты.
 
-- `server/`: TikTok connection, discovery, event normalization, player scoring, health endpoint and WebSocket broadcast.
-- `client/`: React overlay, chat, leaderboard, reconnecting WebSocket client and PixiJS gift effects.
-- `shared/`: common TypeScript event and player contracts.
+## Команды
 
-## Commands
-
-| Command | Description |
+| Команда | Назначение |
 | --- | --- |
-| `npm run dev` | Start frontend and backend for development |
-| `npm run dev:server` | Start only the backend |
-| `npm run dev:client` | Start only the frontend |
-| `npm run build` | Build shared types, backend and frontend |
-| `npm start` | Run the compiled backend |
-| `npm run typecheck` | Type-check all workspaces |
+| `npm run dev` | Запустить сервер и клиент; браузер откроется автоматически |
+| `npm run dev:server` | Запустить только сервер |
+| `npm run dev:client` | Запустить только клиент |
+| `npm run build` | Собрать все workspace-пакеты |
+| `npm run typecheck` | Проверить TypeScript во всех пакетах |
 
-## WebSocket events
-
-`init`, `update_leaderboard`, `chat_message`, `gift_alert`, and `connection_status`.
-
-## Deployment
-
-The included `render.yaml` builds the workspaces and runs the long-lived Node.js process. The `/health` endpoint is used for health checks. The frontend may also be hosted as static files, but set `VITE_WS_URL` to the public `wss://` endpoint before building. The TikTok connector should run in a persistent service, not a serverless function.
+Проект рассчитан на локальный запуск. Для работы не требуется Vercel или Render.
