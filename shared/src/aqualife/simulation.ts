@@ -2,6 +2,7 @@ import { AQUALIFE_CONFIG, type AquaLifeConfig } from "./config.js";
 import { updateFishMovement, type RandomSource } from "./ai.js";
 import { resolveFishBite, resolveJellyfishCollision, respawnFish } from "./combat.js";
 import { applyLikeReward, updateLikeActivitySpeed } from "./rewards.js";
+import { speciesForGiftId } from "./species.js";
 import type {
   AquaLifeFish,
   AquaLifeGameState,
@@ -69,11 +70,14 @@ export function createFishForParticipant(
   participant: AquaLifeParticipant,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): AquaLifeFish | null {
+  const preferredSpecies = participant.unlockedSpecies.at(-1) ?? (participant.subscribed ? "dory" : "standard-gray");
   const existing = state.fish[participant.userId];
   if (existing) {
     existing.isAiControlled = !participant.isActive;
     existing.nickname = participant.nickname;
     existing.avatarUrl = participant.avatarUrl;
+    existing.species = preferredSpecies;
+    existing.size = existing.baseSize * (1 + config.sizeGrowthPerThreshold * Math.floor(participant.likesTotal / config.likesPerSizeGrowth));
     return existing;
   }
   if (Object.keys(state.fish).length >= config.maxFish) return null;
@@ -82,7 +86,7 @@ export function createFishForParticipant(
     participantId: participant.userId,
     nickname: participant.nickname,
     avatarUrl: participant.avatarUrl,
-    species: participant.unlockedSpecies.at(-1) ?? (participant.subscribed ? "dory" : "standard-gray"),
+    species: preferredSpecies,
     status: "spawning",
     x: state.world.width / 2,
     y: state.world.height / 2,
@@ -97,7 +101,7 @@ export function createFishForParticipant(
     baseSpeedPxPerSecond: config.baseSpeedPxPerSecond,
     speedPxPerSecond: config.baseSpeedPxPerSecond,
     baseSize: config.baseFishSize,
-    size: config.baseFishSize,
+    size: config.baseFishSize * (1 + config.sizeGrowthPerThreshold * Math.floor(participant.likesTotal / config.likesPerSizeGrowth)),
     hp: config.initialHp,
     maxHp: null,
     baseAttackDamage: config.baseBiteDamage,
@@ -230,7 +234,13 @@ export function processGameEvent(
       if (participant.unlockedSpecies.length === 0) fish.species = "dory";
       fish.isAiControlled = false;
     }
-  } else if (event.type === "gift" || event.type === "chat") {
+  } else if (event.type === "gift") {
+    participant.isActive = true;
+    const species = speciesForGiftId(event.giftId);
+    if (species && !participant.unlockedSpecies.includes(species)) participant.unlockedSpecies.push(species);
+    const fish = createFishForParticipant(state, participant, config);
+    if (fish) fish.isAiControlled = false;
+  } else if (event.type === "chat") {
     participant.isActive = true;
     const fish = createFishForParticipant(state, participant, config);
     if (fish) fish.isAiControlled = false;
@@ -251,7 +261,11 @@ export function stepAquaLife(
   for (const fish of allFish) {
     updateLikeActivitySpeed(fish, state.nowMs, config);
     if (fish.status === "dead") {
-      respawnFish(fish, state.world, state.nowMs);
+      if (!state.participants[fish.participantId]?.isActive) {
+        if (fish.respawnAtMs !== null && state.nowMs >= fish.respawnAtMs) removeFish(state, fish.id);
+      } else {
+        respawnFish(fish, state.world, state.nowMs);
+      }
       continue;
     }
     if (fish.status === "respawning") {
