@@ -239,7 +239,13 @@ export function processGameEvent(
     const species = speciesForGiftId(event.giftId);
     if (species && !participant.unlockedSpecies.includes(species)) participant.unlockedSpecies.push(species);
     const fish = createFishForParticipant(state, participant, config);
-    if (fish) fish.isAiControlled = false;
+    if (fish) {
+      const giftCount = Number.isFinite(event.count) ? Math.max(1, Math.floor(event.count ?? 1)) : 1;
+      fish.attackDamage += giftCount;
+      fish.hp += giftCount;
+      fish.lastHealAtMs = event.receivedAtMs;
+      fish.isAiControlled = false;
+    }
   } else if (event.type === "chat") {
     participant.isActive = true;
     const fish = createFishForParticipant(state, participant, config);
