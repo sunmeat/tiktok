@@ -71,7 +71,7 @@ export function createFishForParticipant(
   participant: AquaLifeParticipant,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): AquaLifeFish | null {
-  const preferredSpecies = participant.unlockedSpecies.at(-1) ?? (participant.subscribed ? "dory" : "standard-gray");
+  const preferredSpecies = participant.unlockedSpecies.at(-1) ?? (participant.isFollowing || participant.subscribed ? "dory" : "standard-gray");
   const existing = state.fish[participant.userId];
   if (existing) {
     existing.isAiControlled = !participant.isActive;
