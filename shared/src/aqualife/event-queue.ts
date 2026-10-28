@@ -22,10 +22,11 @@ export class BoundedGameEventQueue {
   }
 
   enqueue(event: NormalizedGameEvent): QueueEnqueueResult {
-    // Coalesce queued likes from the same participant before applying backpressure.
-    // The server has already deduplicated provider IDs, so summing distinct packets is safe.
+    // Coalesce adjacent like packets from the same participant without reordering other event types.
+    // The server has already deduplicated provider IDs, so summing distinct adjacent packets is safe.
     if (event.type === "like") {
-      const existing = this.items.find(item => item.type === "like" && item.userId === event.userId);
+      const last = this.items[this.items.length - 1];
+      const existing = last?.type === "like" && last.userId === event.userId ? last : undefined;
       if (existing) {
         existing.count = Math.min(1_000_000, (existing.count ?? 0) + (event.count ?? 0));
         existing.receivedAtMs = Math.max(existing.receivedAtMs, event.receivedAtMs);
