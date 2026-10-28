@@ -327,14 +327,14 @@ export function stepAquaLife(
     updateFishMovement(fish, state.world, boundedDelta / 1000, random, allFish, config);
   }
 
-  // Each fish chooses its nearest smaller living target. Cooldowns prevent repeat bites each frame.
+  // Fish bite the nearest living fish of equal or smaller size. Cooldowns prevent repeat bites each frame.
   for (const attacker of allFish) {
     if (attacker.status === "dead" || attacker.status === "respawning" || state.nowMs < attacker.attackCooldownUntilMs) continue;
     let target: AquaLifeFish | null = null;
     let targetDistance = Number.POSITIVE_INFINITY;
     for (const candidate of allFish) {
       if (candidate.id === attacker.id || candidate.status === "dead" || candidate.status === "respawning" || candidate.status === "spawning") continue;
-      if (candidate.size >= attacker.size) continue;
+      if (candidate.size > attacker.size) continue;
       const distance = Math.hypot(attacker.x - candidate.x, attacker.y - candidate.y);
       const range = config.attackRangePerSize * (attacker.size + candidate.size);
       if (distance <= range && distance < targetDistance) {
