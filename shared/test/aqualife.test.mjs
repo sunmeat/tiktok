@@ -242,7 +242,7 @@ test("movement remains bounded with 500 fish and a burst of likes", () => {
     const event = normalizeTikTokEvent("like", {
       msgId: `load-like-${i}`,
       user: { userId: `load-user-${i}`, nickname: `Viewer ${i}` },
-      likeCount: 100
+      likeCount: 1000
     }, 10_000 + i);
     assert.ok(event);
     processGameEvent(state, event);
