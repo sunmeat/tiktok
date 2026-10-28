@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
-import type { ArenaPlayer, ChatMessage, GiftAlert, ServerMessage } from "@tiktok-arena/shared";
+import type { ArenaPlayer, ChatMessage, GiftAlert, NormalizedGameEvent, ServerMessage } from "@tiktok-arena/shared";
+import { AquaLifeScene } from "./aqualife/AquaLifeScene.js";
 import "./styles.css";
 
 const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%2317283b'/%3E%3Ccircle cx='32' cy='24' r='12' fill='%2362e6ff' opacity='.7'/%3E%3Cpath d='M10 60c1-15 10-22 22-22s21 7 22 22' fill='%2362e6ff' opacity='.7'/%3E%3C/svg%3E";
@@ -19,11 +20,16 @@ function Arena() {
   const [tiktokOnline, setTiktokOnline] = useState(false);
   const [username, setUsername] = useState("playing_in.chat");
   const chatRef = useRef<HTMLDivElement>(null);
+  const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
     if (message.type === "init" || message.type === "update_leaderboard") setPlayers(message.data);
     if (message.type === "chat_message") setChat(old => [...old.slice(-299), message.data]);
     if (message.type === "gift_alert") setGift(message.data);
+    if (message.type === "aqualife_event") {
+      aquaEventsRef.current.push(message.data);
+      if (aquaEventsRef.current.length > 2000) aquaEventsRef.current.splice(0, aquaEventsRef.current.length - 2000);
+    }
     if (message.type === "connection_status") {
       setTiktokOnline(message.data.connected);
       setUsername(message.data.username);
