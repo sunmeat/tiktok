@@ -51,6 +51,9 @@ export class AquaLifePixiAdapter {
       view.root.rotation = fish.rotation;
       if (view.lastSpecies !== fish.species) {
         this.drawFishBody(view.body, fish.species);
+        view.body.tint = 0xffffff;
+        view.lastFeedback = null;
+        view.lastCombatFeedback = null;
         view.lastSpecies = fish.species;
       }
       const bodyScale = Math.max(0.2, fish.size);
