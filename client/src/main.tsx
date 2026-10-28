@@ -59,8 +59,7 @@ function Arena() {
         <div className="guide-title">GIFT POWER-UPS</div>
         <ul>
           {GIFT_GUIDE.map(gift => <li key={gift.name}>
-            <b>{gift.emoji} {gift.name}</b>
-            <span className="coins">🪙 {gift.coins}</span>
+            <b><span className="gift-icon" aria-hidden="true">{gift.emoji}</span> {gift.name}</b>
             {gift.boost.hp > 0
               ? <span className="boost hp">+{gift.boost.hp.toLocaleString("en-US")} HP</span>
               : <span className="boost atk">+{gift.boost.attack} ATK</span>}
