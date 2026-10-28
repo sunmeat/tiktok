@@ -76,6 +76,31 @@ For each meaningful gameplay/rendering change:
 5. Check resize, reconnect, tab hide/show, and teardown behavior when relevant.
 6. State clearly what was tested and what was not. Never claim a 60 FPS result without measurement on a named test setup.
 
+
+## TikTok vertical layout and responsive composition
+
+- Design the primary stream composition for a **9:16 portrait canvas** first, because most viewers watch TikTok LIVE on phones in portrait orientation. Keep the logical game viewport independent from the actual browser/OBS source dimensions.
+- Preserve the entire game field at every viewport size. Use a centered **contain/letterbox** strategy: scale the 9:16 composition uniformly to fit the available width and height, never stretch it and never crop important gameplay. CSS `object-fit: contain` applies to replaced elements such as images/video; for a DOM/PixiJS game viewport, use an explicit aspect-ratio container and calculate a uniform scale or use an equivalent contain layout.
+- Fill unused space with an intentional background, frame, or optional overlay panels such as recent gifts/top supporters. Decorative panels must not cover critical gameplay or become a performance burden.
+- Test narrow and short viewports, desktop windows, OBS Browser Source sizes, and live resize. Keep the game centered and ensure the full playable field remains visible.
+
+## Mobile readability and TikTok safe areas
+
+- Treat phone-size readability as a core requirement, not a final polish step. Player names, scores, health/status indicators, timers, and round outcomes must remain legible at typical phone viewing sizes. Prefer a small number of clear, high-priority indicators over dense microtext.
+- Establish responsive typography and UI sizing with tested minimums. Do not assume a desktop font size will remain readable after the whole scene is scaled down; scale or reflow interface elements deliberately while preserving the game world's aspect ratio.
+- Maintain strong contrast between text and the scene. Use dark translucent backing panels (for example, `rgba(0, 0, 0, 0.6)`) and restrained bright accent colors where appropriate. Do not rely on color alone to communicate critical state.
+- Respect TikTok's mobile player overlays: the right-side action rail and the bottom creator/comment/input area can obscure content. Keep critical gameplay and moment-to-moment action near the center and upper half of the portrait composition, with suitable safe-area margins on the right and bottom.
+- Place secondary information such as chat history, recent events, and extended statistics in reserved side/bottom regions only when those regions are safe for the target player UI. Never put a critical control, player, score, or gameplay event beneath a known overlay area.
+- Safe-area dimensions can vary by TikTok client, device, and stream layout. Treat margins as configurable layout constraints and validate using real preview/device checks rather than assuming one universal pixel offset.
+
+## Animation and performance on mobile viewers
+
+- Keep the 60 FPS target from the performance section, but measure frame time on representative hardware. Avoid large blur/glow filters, excessive alpha layers, oversized particle bursts, and long-running animations that cost more than they contribute.
+- Prefer PixiJS-managed animation for dynamic game entities and effects. Keep CSS animation for DOM UI elements where appropriate; animate primarily `transform` and `opacity` instead of layout-triggering properties such as `top`, `left`, `width`, and `height`.
+- Use `will-change: transform` (or `opacity`) selectively for elements that are about to animate and only while useful. Do not apply `will-change` to every element permanently: it can consume memory and create excessive compositor layers on mobile devices.
+- Cap particle/effect counts and visual quality according to measured performance when needed. Under load, preserve gameplay clarity and important state updates before decorative effects.
+- Verify smoothness with browser/OBS performance tools and, where possible, a real phone or low-powered device. Do not claim universal 60 FPS based only on a desktop development preview.
+
 ## Agreed game rules
 
 The actual gameplay rules will be recorded here as they are supplied and confirmed. Do not invent missing scoring, win/lose, spawn, movement, collision, or round-reset rules. If a rule is ambiguous and would affect architecture or behavior, ask one focused question before implementing it.
