@@ -18,6 +18,12 @@ export interface AquaLifeConfig {
   readonly separationStrength: number;
   readonly baseBiteDamage: number;
   readonly jellyfishDamage: number;
+  readonly fishCollisionRadiusPerSize: number;
+  readonly attackRangePerSize: number;
+  readonly attackCooldownMs: number;
+  readonly biteAnimationMs: number;
+  readonly jellyfishHitCooldownMs: number;
+  readonly jellyfishBaseSpeedPxPerSecond: number;
   readonly defaultWorldWidth: number;
   readonly defaultWorldHeight: number;
   readonly simulationStepMs: number;
@@ -54,6 +60,12 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   separationStrength: 0.35,
   baseBiteDamage: 1,
   jellyfishDamage: 1,
+  fishCollisionRadiusPerSize: 18,
+  attackRangePerSize: 24,
+  attackCooldownMs: 1_000,
+  biteAnimationMs: 180,
+  jellyfishHitCooldownMs: 900,
+  jellyfishBaseSpeedPxPerSecond: 34,
   defaultWorldWidth: 540,
   defaultWorldHeight: 960,
   simulationStepMs: 50,
