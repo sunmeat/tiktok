@@ -76,3 +76,10 @@ For a public shareable page, deploy the client and server to a hosting setup tha
 ## License
 
 No license has been specified yet.
+
+
+## Viewer presence and SQLite history
+
+When the TikTok connector provides an identifiable viewer-leave event, the viewer is removed from the online leaderboard immediately. Their fish continues to wander for up to 30 seconds, fades during the final 1.2 seconds, and is then removed. Departure statistics are written to the SQLite `departed_viewers` table after the grace period. The database path can be configured with `AQUALIFE_DB_PATH`; otherwise it is stored under `data/aqualife.sqlite` (or `DATA_DIR` if configured). On hosting platforms, use a persistent disk for `DATA_DIR` if the history must survive redeploys.
+
+The connector must expose a real leave signal for this lifecycle to trigger. A silent viewer who sends no likes is not considered to have left, and their fish keeps swimming at its calm idle speed.
