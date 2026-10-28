@@ -11,7 +11,7 @@
   "scripts": {
     "predev:server": "npm run build --workspace @tiktok-arena/shared",
     "predev:client": "npm run build --workspace @tiktok-arena/shared",
-    "dev": "npm run build --workspace @tiktok-arena/shared && concurrently -k -n SERVER,CLIENT \"npm run dev --workspace @tiktok-arena/server\" \"npm run dev --workspace @tiktok-arena/client\"",
+    "dev": "node scripts/free-dev-ports.mjs && npm run build --workspace @tiktok-arena/shared && concurrently -k -n SERVER,CLIENT \"npm run dev --workspace @tiktok-arena/server\" \"npm run dev --workspace @tiktok-arena/client\"",
     "dev:server": "npm run dev --workspace @tiktok-arena/server",
     "dev:client": "npm run dev --workspace @tiktok-arena/client",
     "build": "npm run build --workspace @tiktok-arena/shared && npm run build --workspace @tiktok-arena/server && npm run build --workspace @tiktok-arena/client",
