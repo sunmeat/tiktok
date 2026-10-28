@@ -25,6 +25,7 @@ export interface GiftAlert {
 export * from "./aqualife/types.js";
 export * from "./aqualife/config.js";
 export * from "./aqualife/events.js";
+export * from "./aqualife/event-queue.js";
 export * from "./aqualife/rewards.js";
 export * from "./aqualife/ai.js";
 export * from "./aqualife/combat.js";
