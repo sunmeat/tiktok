@@ -5,6 +5,7 @@ export interface AquaLifeConfig {
   readonly likeSpeedPxPerSecondPerLikePerSecond: number;
   readonly likeActivityWindowMs: number;
   readonly baseFishSize: number;
+  readonly baseSpeedPxPerSecond: number;
   readonly baseBiteDamage: number;
   readonly jellyfishDamage: number;
   readonly defaultWorldWidth: number;
@@ -25,6 +26,7 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   likeSpeedPxPerSecondPerLikePerSecond: 0.6,
   likeActivityWindowMs: 5_000,
   baseFishSize: 1,
+  baseSpeedPxPerSecond: 0,
   baseBiteDamage: 1,
   jellyfishDamage: 1,
   defaultWorldWidth: 540,
