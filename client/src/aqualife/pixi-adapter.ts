@@ -1,5 +1,6 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
-import type { AquaLifeRenderSnapshot, FishRenderModel } from "@tiktok-arena/shared";
+import { getFishSpeciesDefinition } from "@tiktok-arena/shared";
+import type { AquaLifeRenderSnapshot, FishRenderModel, FishSpeciesId } from "@tiktok-arena/shared";
 
 interface FishView {
   root: Container;
@@ -8,6 +9,7 @@ interface FishView {
   lastLabel: string;
   lastFeedback: FishRenderModel["rewardFeedback"];
   lastCombatFeedback: FishRenderModel["combatFeedback"];
+  lastSpecies: FishSpeciesId;
 }
 
 /**
@@ -47,6 +49,10 @@ export class AquaLifePixiAdapter {
       const view = this.fishViews.get(fish.id) ?? this.createFishView(fish);
       view.root.position.set(fish.x, fish.y);
       view.root.rotation = fish.rotation;
+      if (view.lastSpecies !== fish.species) {
+        this.drawFishBody(view.body, fish.species);
+        view.lastSpecies = fish.species;
+      }
       const bodyScale = Math.max(0.2, fish.size);
       const combatScale = fish.combatFeedback === "attack" ? 1.22 : fish.combatFeedback === "hurt" ? 0.82 : 1;
       view.body.scale.set(bodyScale * combatScale);
@@ -111,20 +117,42 @@ export class AquaLifePixiAdapter {
     this.root.destroy({ children: true });
   }
 
+  private drawFishBody(body: Graphics, speciesId: FishSpeciesId): void {
+    const species = getFishSpeciesDefinition(speciesId);
+    body.clear();
+    body
+      .poly([species.bodyLength * 0.65, 0, species.bodyLength + species.tailLength, -species.bodyHeight * 0.8, species.bodyLength + species.tailLength, species.bodyHeight * 0.8])
+      .fill(species.finColor)
+      .ellipse(0, 0, species.bodyLength, species.bodyHeight)
+      .fill(species.bodyColor);
+
+    if (species.pattern === "stripe") {
+      body.rect(-species.bodyLength * 0.2, -species.bodyHeight * 0.8, 3, species.bodyHeight * 1.6).fill(species.accentColor);
+      body.rect(species.bodyLength * 0.25, -species.bodyHeight * 0.8, 3, species.bodyHeight * 1.6).fill(species.accentColor);
+    } else if (species.pattern === "spots") {
+      body.circle(-species.bodyLength * 0.25, -species.bodyHeight * 0.2, 2.1).fill(species.accentColor);
+      body.circle(species.bodyLength * 0.2, species.bodyHeight * 0.25, 1.8).fill(species.accentColor);
+      body.circle(species.bodyLength * 0.42, -species.bodyHeight * 0.25, 1.5).fill(species.accentColor);
+    } else if (species.pattern === "mask") {
+      body.ellipse(species.bodyLength * 0.35, 0, 4, species.bodyHeight * 0.95).fill(species.accentColor);
+    } else if (species.pattern === "belly") {
+      body.ellipse(0, species.bodyHeight * 0.38, species.bodyLength * 0.58, species.bodyHeight * 0.35).fill(species.accentColor);
+    } else if (species.pattern === "glow") {
+      body.ellipse(-species.bodyLength * 0.05, 0, species.bodyLength * 0.72, species.bodyHeight * 0.28).fill({ color: species.accentColor, alpha: 0.72 });
+    }
+    body.poly([-species.bodyLength * 0.2, -species.bodyHeight * 0.65, species.bodyLength * 0.15, -species.bodyHeight * 1.35, species.bodyLength * 0.45, -species.bodyHeight * 0.5]).fill(species.finColor);
+    body.circle(species.bodyLength * 0.48, -species.bodyHeight * 0.2, species.eyeSize).fill("#06222b");
+  }
+
   private createFishView(fish: FishRenderModel): FishView {
     const root = new Container();
-    const body = new Graphics()
-      .ellipse(0, 0, 15, 8)
-      .fill(fish.species === "standard-gray" ? "#9aa9b1" : "#41d8ee")
-      .poly([11, 0, 21, -7, 21, 7])
-      .fill(fish.species === "standard-gray" ? "#7f9099" : "#1ca9d1")
-      .circle(6, -2, 1.5)
-      .fill("#06222b");
+    const body = new Graphics();
+    this.drawFishBody(body, fish.species);
     const label = new Text({ text: `${fish.nickname} · ${fish.hp} HP`, style: this.labelStyle });
     label.anchor.set(0.5, 0);
     root.addChild(body, label);
     this.root.addChild(root);
-    const view = { root, body, label, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null };
+    const view = { root, body, label, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null, lastSpecies: fish.species };
     this.fishViews.set(fish.id, view);
     return view;
   }
