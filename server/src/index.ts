@@ -251,7 +251,7 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     onConnectorEvent(WebcastEvent.FOLLOW, (data: RecordData) => {
       const event = ingestEvent("follow", data);
       if (!event) return;
-      updatePlayer(event.userId, 0, event.avatarUrl, event.nickname, { isFollowing: true });
+      updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname, { isFollowing: true });
     });
   }
   onConnectorEvent(WebcastEvent.SUB_NOTIFY, (data: RecordData) => {
