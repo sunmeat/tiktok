@@ -24,6 +24,23 @@ function safePositiveCount(value: unknown, fallback: number | null = null): numb
   return Math.min(1_000_000, integer);
 }
 
+function followingStatus(user: UnknownRecord, data: UnknownRecord): boolean | undefined {
+  const directValues = [user.isFollowing, user.following, data.isFollowing, data.following];
+  for (const value of directValues) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number" && (value === 0 || value === 1)) return value === 1;
+  }
+  const followInfo = record(user.followInfo ?? data.followInfo);
+  const status = followInfo.followStatus ?? followInfo.followStatusType ?? user.followStatus ?? data.followStatus;
+  if (typeof status === "boolean") return status;
+  if (typeof status === "number" && Number.isFinite(status)) return status > 0;
+  if (typeof status === "string" && /^(true|false|0|1|2)$/i.test(status.trim())) {
+    const normalized = status.trim().toLowerCase();
+    return normalized === "true" || (normalized !== "false" && Number(normalized) > 0);
+  }
+  return undefined;
+}
+
 function profileAvatar(user: UnknownRecord): string {
   const picture = record(user.profilePicture);
   const avatarThumb = record(user.avatarThumb);
@@ -71,25 +88,26 @@ export function normalizeTikTokEvent(
   const userId = rawUserId;
   const nickname = stringValue(user.nickname, user.uniqueId, user.displayId, userId).slice(0, 80);
   const avatarUrl = profileAvatar(user);
+  const isFollowing = kind === "follow" ? true : followingStatus(user, data);
   const providerEventId = stringValue(data.msgId, data.messageId, data.eventId);
   const dedupeKey = providerEventId && providerEventId.length <= 256 ? `${kind}:${providerEventId}` : null;
   // Without a provider event ID, do not suppress legitimate repeated likes or gifts.
   const eventId = dedupeKey ?? `untracked:${kind}:${userId}:${receivedAtMs}`;
 
   if (kind === "member") {
-    return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
+    return { type: "viewer-joined", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, ...(isFollowing === undefined ? {} : { isFollowing }) };
   }
   if (kind === "like") {
     // A LIKE packet without an explicit positive count is malformed; never invent one like.
     const count = safePositiveCount(data.likeCount ?? data.count);
     if (count === null) return null;
-    return { type: "like", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, count };
+    return { type: "like", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, count, ...(isFollowing === undefined ? {} : { isFollowing }) };
   }
   if (kind === "follow") {
     return { type: "follow", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
   }
   if (kind === "subscribe") {
-    return { type: "subscribe", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs };
+    return { type: "subscribe", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, ...(isFollowing === undefined ? {} : { isFollowing }) };
   }
   if (kind === "gift") {
     const giftDetails = record(data.giftDetails);
@@ -108,11 +126,12 @@ export function normalizeTikTokEvent(
       nickname,
       avatarUrl,
       receivedAtMs,
+      ...(isFollowing === undefined ? {} : { isFollowing }),
       count: count ?? 1,
       giftId,
       giftName: stringValue(data.giftName, giftDetails.giftName, gift.name).slice(0, 120) || "подарок"
     };
   }
   const comment = stringValue(data.comment, data.content).slice(0, 2_000);
-  return { type: "chat", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, comment };
+  return { type: "chat", eventId, dedupeKey, userId, nickname, avatarUrl, receivedAtMs, comment, ...(isFollowing === undefined ? {} : { isFollowing }) };
 }
