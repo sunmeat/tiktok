@@ -11,6 +11,12 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
   const [gift, setGift] = useState<GiftAlert | null>(null);
+  const [panelPhase, setPanelPhase] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setPanelPhase(phase => (phase + 1) % 6), 5000);
+    return () => window.clearInterval(timer);
+  }, []);
   const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
@@ -55,7 +61,7 @@ function Arena() {
     <section className="aquarium-panel" aria-label="AquaLife underwater scene">
       <div className="sea-stage">
       <AquaLifeScene eventsRef={aquaEventsRef} />
-      <aside className="gift-guide overlay-panel" aria-label="Gift power-ups">
+      {panelPhase === 0 && <aside className="gift-guide overlay-panel" aria-label="Gift power-ups">
         <div className="guide-title">GIFT POWER-UPS</div>
         <ul>
           {GIFT_GUIDE.map(gift => <li key={gift.name}>
@@ -65,8 +71,8 @@ function Arena() {
               : <span className="boost atk">+{gift.boost.attack} ATK</span>}
           </li>)}
         </ul>
-      </aside>
-      <aside className="aquarium-guide overlay-panel" aria-label="How to play">
+      </aside>}
+      {panelPhase === 2 && <aside className="aquarium-guide overlay-panel" aria-label="How to play">
         <div className="guide-title">HOW TO PLAY</div>
         <ul>
           <li><b>Likes</b><span>Swim faster</span></li>
@@ -74,8 +80,8 @@ function Arena() {
           <li><b>100 likes</b><span>Grow 1%</span></li>
           <li><b>Gifts</b><span>More power</span></li>
         </ul>
-      </aside>
-    <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
+      </aside>}
+    {panelPhase === 4 && <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
       <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong></header>
       <div className="players-list">
         {!ranked.length && <div className="empty">Waiting for viewers…</div>}
@@ -88,7 +94,7 @@ function Arena() {
           </div>
         </article>)}
       </div>
-    </aside>
+    </aside>}
       </div>
     </section>
   </main>;
