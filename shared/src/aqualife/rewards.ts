@@ -5,9 +5,10 @@ export interface LikeRewardResult {
   hpGained: number;
   sizeMultiplier: number;
   speedPxPerSecond: number;
+  grew: boolean;
 }
 
-/** Applies the confirmed HP rule and records bounded like-activity samples. */
+/** Applies cumulative HP/size rewards and bounded like-activity samples. */
 export function applyLikeReward(
   participant: AquaLifeParticipant,
   fish: AquaLifeFish,
@@ -16,25 +17,47 @@ export function applyLikeReward(
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): LikeRewardResult {
   const safeLikes = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  const safeAtMs = Number.isFinite(atMs) ? Math.max(0, atMs) : 0;
+  const previousLikesTotal = participant.likesTotal;
   participant.likesTotal += safeLikes;
   participant.likesRemainderForHp += safeLikes;
+
   const hpGained = Math.floor(participant.likesRemainderForHp / config.likesPerHp);
   participant.likesRemainderForHp %= config.likesPerHp;
-  fish.hp += hpGained;
+  if (hpGained > 0) {
+    fish.hp += hpGained;
+    fish.lastHealAtMs = safeAtMs;
+  }
 
-  fish.likesPerSecondSamples.push({ atMs: Number.isFinite(atMs) ? Math.max(0, atMs) : 0, count: safeLikes });
-  fish.likesPerSecondSamples.sort((a, b) => a.atMs - b.atMs);
-  const cutoff = atMs - config.likeActivityWindowMs;
+  const previousGrowthThreshold = Math.floor(previousLikesTotal / config.likesPerSizeGrowth);
+  const currentGrowthThreshold = Math.floor(participant.likesTotal / config.likesPerSizeGrowth);
+  const grew = currentGrowthThreshold > previousGrowthThreshold;
+  fish.size = fish.baseSize * Math.pow(
+    1 + config.sizeGrowthPerThreshold,
+    currentGrowthThreshold
+  );
+  if (grew) fish.lastGrowthAtMs = safeAtMs;
+  if (safeLikes > 0) fish.lastLikeAtMs = safeAtMs;
+
+  if (safeLikes > 0) {
+    fish.likesPerSecondSamples.push({ atMs: safeAtMs, count: safeLikes });
+    fish.likesPerSecondSamples.sort((a, b) => a.atMs - b.atMs);
+  }
+  const cutoff = safeAtMs - config.likeActivityWindowMs;
   while (fish.likesPerSecondSamples.length && fish.likesPerSecondSamples[0].atMs < cutoff) {
     fish.likesPerSecondSamples.shift();
   }
   while (fish.likesPerSecondSamples.length > config.maxLikeSamplesPerFish) {
     fish.likesPerSecondSamples.shift();
   }
-  updateLikeActivitySpeed(fish, atMs, config);
-  // Size growth is intentionally not applied until its gameplay formula is confirmed.
-  const sizeMultiplier = fish.size / config.baseFishSize;
-  return { hpGained, sizeMultiplier, speedPxPerSecond: fish.speedPxPerSecond };
+  updateLikeActivitySpeed(fish, safeAtMs, config);
+
+  return {
+    hpGained,
+    sizeMultiplier: fish.baseSize > 0 ? fish.size / fish.baseSize : 1,
+    speedPxPerSecond: fish.speedPxPerSecond,
+    grew
+  };
 }
 
 /** Converts rolling like activity to a bounded target speed and smooths toward it. */
