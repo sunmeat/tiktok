@@ -13,6 +13,11 @@ export interface AquaLifeConfig {
   readonly simulationStepMs: number;
   readonly maxCatchUpSteps: number;
   readonly maxQueuedEvents: number;
+  readonly maxParticipants: number;
+  readonly maxFish: number;
+  readonly maxJellyfish: number;
+  readonly maxProcessedEventIds: number;
+  readonly maxLikeSamplesPerFish: number;
 }
 
 /**
@@ -33,5 +38,10 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   defaultWorldHeight: 960,
   simulationStepMs: 50,
   maxCatchUpSteps: 5,
-  maxQueuedEvents: 2_000
+  maxQueuedEvents: 2_000,
+  maxParticipants: 1_000,
+  maxFish: 500,
+  maxJellyfish: 100,
+  maxProcessedEventIds: 4_000,
+  maxLikeSamplesPerFish: 120
 });
