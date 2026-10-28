@@ -21,12 +21,12 @@ function safeCount(value: unknown, fallback = 1): number {
 
 /** Convert connector-specific payloads into a stable internal event contract. */
 export function normalizeTikTokEvent(
-  kind: "member" | "like" | "follow" | "gift" | "chat",
+  kind: "member" | "like" | "follow" | "subscribe" | "gift" | "chat",
   payload: unknown,
   receivedAtMs = Date.now()
 ): NormalizedGameEvent | null {
   const data = record(payload);
-  const user = record(data.user);
+  const user = record(data.user ?? data);
   const userId = stringValue(user.uniqueId, user.displayId, user.userId, user.id, data.uniqueId);
   if (!userId || userId.toLowerCase() === "unknown") return null;
 
@@ -46,6 +46,7 @@ export function normalizeTikTokEvent(
     return { type: "like", eventId, userId, nickname, avatarUrl, receivedAtMs, count: safeCount(data.likeCount ?? data.count) };
   }
   if (kind === "follow") return { type: "follow", eventId, userId, nickname, avatarUrl, receivedAtMs, isFollowing: true };
+  if (kind === "subscribe") return { type: "subscribe", eventId, userId, nickname, avatarUrl, receivedAtMs };
   if (kind === "gift") {
     return {
       type: "gift", eventId, userId, nickname, avatarUrl, receivedAtMs,
