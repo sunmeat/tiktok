@@ -143,7 +143,7 @@ function userId(user?: RecordData): string {
   return String(user?.uniqueId || user?.displayId || user?.userId || user?.id || "unknown");
 }
 function leaderboard(): ArenaPlayer[] {
-  return [...players.values()].sort((a, b) => b.score - a.score);
+  return [...players.values()].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes);
 }
 function updatePlayer(
   id: string,
