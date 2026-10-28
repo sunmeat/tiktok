@@ -25,12 +25,12 @@ function safePositiveCount(value: unknown, fallback: number | null = null): numb
 }
 
 function followingStatus(user: UnknownRecord, data: UnknownRecord): boolean | undefined {
-  const directValues = [user.isFollowing, user.following, data.isFollowing, data.following];
+  const followInfo = record(user.followInfo ?? data.followInfo);
+  const directValues = [user.isFollowing, user.following, data.isFollowing, data.following, followInfo.isFollowing, followInfo.following];
   for (const value of directValues) {
     if (typeof value === "boolean") return value;
     if (typeof value === "number" && (value === 0 || value === 1)) return value === 1;
   }
-  const followInfo = record(user.followInfo ?? data.followInfo);
   const status = followInfo.followStatus ?? followInfo.followStatusType ?? user.followStatus ?? data.followStatus;
   if (typeof status === "boolean") return status;
   if (typeof status === "number" && Number.isFinite(status)) return status > 0;
@@ -129,7 +129,7 @@ export function normalizeTikTokEvent(
       ...(isFollowing === undefined ? {} : { isFollowing }),
       count: count ?? 1,
       giftId,
-      giftName: stringValue(data.giftName, giftDetails.giftName, gift.name).slice(0, 120) || "подарок"
+      giftName: stringValue(data.giftName, giftDetails.giftName, gift.name, giftDetails.name, data.describe, record(data.extendedGiftInfo).name, record(data.giftInfo).name).slice(0, 120) || "подарок"
     };
   }
   const comment = stringValue(data.comment, data.content).slice(0, 2_000);
