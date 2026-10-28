@@ -41,8 +41,11 @@ export function resolveFishBite(
   attacker.attackAnimationUntilMs = nowMs + config.biteAnimationMs;
   attacker.status = "attacking";
 
+  const damage = Math.max(1, Math.floor(attacker.attackDamage || config.baseBiteDamage));
   target.lastHurtAtMs = nowMs;
-  target.hp = Math.max(0, target.hp - Math.max(1, Math.floor(attacker.attackDamage || config.baseBiteDamage)));
+  target.lastDamageTaken = damage;
+  target.damageSeq += 1;
+  target.hp = Math.max(0, target.hp - damage);
   if (target.hp <= 0) return killFishOnce(target, nowMs, config);
   return { hit: true, killed: false, respawnAtMs: null };
 }

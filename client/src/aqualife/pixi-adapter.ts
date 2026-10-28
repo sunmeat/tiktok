@@ -17,6 +17,8 @@ interface FishView {
   lastFeedback: FishRenderModel["rewardFeedback"];
   lastCombatFeedback: FishRenderModel["combatFeedback"];
   lastSpecies: FishSpeciesId;
+  /** Last damageSeq already shown, so each bite spawns exactly one floating number. */
+  lastDamageSeq: number;
   /** Where the tail joins the body, in unscaled species units. */
   tailJointX: number;
   tailPhase: number;
@@ -36,6 +38,18 @@ interface JellyfishView {
 }
 
 const TWO_PI = Math.PI * 2;
+/** Bounded pool of floating combat numbers; the oldest is reused when all are busy. */
+const MAX_DAMAGE_NUMBERS = 24;
+const DAMAGE_NUMBER_SECONDS = 1;
+
+interface DamageNumber {
+  text: Text;
+  age: number;
+  active: boolean;
+  startX: number;
+  startY: number;
+  drift: number;
+}
 /** Largest nose-up/nose-down tilt; steeper headings keep this tilt instead of flipping the fish. */
 const MAX_PITCH = 1.3;
 
@@ -54,6 +68,15 @@ function wrapAngle(angle: number): number {
 export class AquaLifePixiAdapter {
   readonly root = new Container();
   private lastNowMs = -1;
+  private readonly damageLayer = new Container();
+  private readonly damageNumbers: DamageNumber[] = [];
+  private readonly damageStyle = new TextStyle({
+    fill: "#ff5252",
+    fontFamily: "Arial",
+    fontSize: 20,
+    fontWeight: "900",
+    stroke: { color: "#2a0606", width: 4 }
+  });
   private readonly fishViews = new Map<string, FishView>();
   private readonly jellyfishViews = new Map<string, JellyfishView>();
   private readonly labelStyle = new TextStyle({
@@ -76,6 +99,7 @@ export class AquaLifePixiAdapter {
 
   constructor(private readonly stage: Container) {
     this.stage.addChild(this.root);
+    this.root.addChild(this.damageLayer);
   }
 
   update(snapshot: AquaLifeRenderSnapshot, viewportWidth: number, viewportHeight: number): void {
@@ -93,6 +117,10 @@ export class AquaLifePixiAdapter {
       const view = this.fishViews.get(fish.id) ?? this.createFishView(fish);
       view.root.position.set(fish.x, fish.y);
       this.animateFish(view, fish, dt);
+      if (fish.damageSeq !== view.lastDamageSeq) {
+        view.lastDamageSeq = fish.damageSeq;
+        this.spawnDamageNumber(fish.lastDamage, fish.x, fish.y - 18 * Math.max(0.2, fish.size), fish.damageSeq);
+      }
       if (view.lastSpecies !== fish.species) {
         this.drawFishBody(view.body, fish.species);
         this.drawFishTail(view.tail, fish.species);
@@ -104,7 +132,7 @@ export class AquaLifePixiAdapter {
       }
       const bodyScale = Math.max(0.2, fish.size);
       view.shadow.scale.set(bodyScale, bodyScale);
-      const label = `${fish.nickname} · HP ${fish.hp} · ATK ${fish.attackDamage}`;
+      const label = `${fish.nickname} · HP ${fish.hp}`;
       if (label !== view.lastLabel) {
         view.label.text = label;
         view.lastLabel = label;
@@ -132,6 +160,8 @@ export class AquaLifePixiAdapter {
       this.fishViews.delete(id);
     }
 
+    this.updateDamageNumbers(dt);
+
     const seenJellyfish = new Set<string>();
     for (const jellyfish of snapshot.jellyfish) {
       seenJellyfish.add(jellyfish.id);
@@ -139,6 +169,7 @@ export class AquaLifePixiAdapter {
       if (!view) {
         view = this.createJellyfishView(jellyfish.size);
         this.root.addChild(view.root);
+        this.root.addChild(this.damageLayer);
         this.jellyfishViews.set(jellyfish.id, view);
       }
       view.root.position.set(jellyfish.x, jellyfish.y);
@@ -168,6 +199,47 @@ export class AquaLifePixiAdapter {
     for (const view of this.jellyfishViews.values()) view.root.destroy({ children: true });
     this.jellyfishViews.clear();
     this.root.destroy({ children: true });
+  }
+
+  private spawnDamageNumber(amount: number, x: number, y: number, seq: number): void {
+    let entry = this.damageNumbers.find(item => !item.active);
+    if (!entry) {
+      if (this.damageNumbers.length < MAX_DAMAGE_NUMBERS) {
+        const text = new Text({ text: "", style: this.damageStyle });
+        text.anchor.set(0.5);
+        this.damageLayer.addChild(text);
+        entry = { text, age: 0, active: false, startX: 0, startY: 0, drift: 0 };
+        this.damageNumbers.push(entry);
+      } else {
+        // Overflow policy: reuse the number that has been on screen the longest.
+        entry = this.damageNumbers.reduce((oldest, item) => (item.age > oldest.age ? item : oldest));
+      }
+    }
+    entry.text.text = `-${Math.max(1, Math.round(amount))}`;
+    entry.age = 0;
+    entry.active = true;
+    entry.startX = x;
+    entry.startY = y;
+    entry.drift = ((seq * 37) % 21 - 10) * 0.9;
+    entry.text.visible = true;
+  }
+
+  private updateDamageNumbers(dt: number): void {
+    for (const item of this.damageNumbers) {
+      if (!item.active) continue;
+      item.age += dt;
+      const t = item.age / DAMAGE_NUMBER_SECONDS;
+      if (t >= 1) {
+        item.active = false;
+        item.text.visible = false;
+        continue;
+      }
+      // Rises with ease-out, pops in slightly larger, then fades over the last 40%.
+      const rise = 1 - (1 - t) * (1 - t);
+      item.text.position.set(item.startX + item.drift * t, item.startY - 34 * rise);
+      item.text.scale.set(t < 0.15 ? 1.35 - 0.35 * (t / 0.15) : 1);
+      item.text.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
+    }
   }
 
   /**
@@ -295,7 +367,7 @@ export class AquaLifePixiAdapter {
     const body = new Graphics();
     this.drawFishTail(tail, fish.species);
     this.drawFishBody(body, fish.species);
-    const label = new Text({ text: `${fish.nickname} · HP ${fish.hp} · ATK ${fish.attackDamage}`, style: this.labelStyle });
+    const label = new Text({ text: `${fish.nickname} · HP ${fish.hp}`, style: this.labelStyle });
     label.anchor.set(0.5, 0);
     const comment = new Text({ text: "", style: this.commentStyle });
     comment.anchor.set(0.5, 1);
@@ -303,6 +375,7 @@ export class AquaLifePixiAdapter {
     swim.addChild(shadow, tail, body);
     root.addChild(swim, label, comment);
     this.root.addChild(root);
+    this.root.addChild(this.damageLayer);
     const facingTarget: 1 | -1 = Math.cos(fish.rotation) < 0 ? -1 : 1;
     const view: FishView = {
       root, swim, shadow, tail, body, label, comment,
@@ -311,6 +384,7 @@ export class AquaLifePixiAdapter {
       lastFeedback: null,
       lastCombatFeedback: null,
       lastSpecies: fish.species,
+      lastDamageSeq: fish.damageSeq,
       tailJointX: -getFishSpeciesDefinition(fish.species).bodyLength * 0.66,
       tailPhase: Math.random() * TWO_PI,
       swayPhase: Math.random() * TWO_PI,

@@ -73,6 +73,10 @@ export interface AquaLifeFish {
   lastHealAtMs: number | null;
   lastGrowthAtMs: number | null;
   lastHurtAtMs: number | null;
+  /** HP lost in the most recent fish bite; paired with damageSeq so the renderer shows each hit once. */
+  lastDamageTaken: number;
+  /** Incremented on every bite this fish receives. */
+  damageSeq: number;
   lastAttackAtMs: number | null;
   attackCooldownUntilMs: number;
   attackAnimationUntilMs: number;
@@ -142,6 +146,10 @@ export interface FishRenderModel {
   turnVelocity: number;
   /** True while the fish hovers in place, balancing with its pectoral fins. */
   hovering: boolean;
+  /** Counts bites received; a change means a new floating damage number should appear. */
+  damageSeq: number;
+  /** HP lost in the latest bite. */
+  lastDamage: number;
   size: number;
   hp: number;
   maxHp: number | null;

@@ -818,3 +818,31 @@ test("idle fish never freeze: they keep moving horizontally and vertically acros
     assert.ok(slowestWindow > 8, `seed ${seed}: fish nearly froze for 10 s (moved ${slowestWindow.toFixed(1)} px)`);
   }
 });
+
+
+test("every fish bite records its damage once so the renderer can float a -N number", () => {
+  const state = createAquaLifeState();
+  const attacker = joinSwimmer("damage-attacker", state);
+  const target = joinSwimmer("damage-target", state);
+  attacker.status = "swimming";
+  target.status = "swimming";
+  attacker.size = 2;
+  attacker.attackDamage = 3;
+  attacker.x = 100; attacker.y = 100;
+  target.size = 1;
+  target.x = 120; target.y = 100;
+  target.hp = 10;
+
+  assert.equal(target.damageSeq, 0);
+  assert.equal(resolveFishBite(attacker, target, 2_000).hit, true);
+  assert.equal(target.damageSeq, 1);
+  assert.equal(target.lastDamageTaken, 3);
+  assert.equal(resolveFishBite(attacker, target, 2_100).hit, false, "cooldown: no new number");
+  assert.equal(target.damageSeq, 1);
+  assert.equal(resolveFishBite(attacker, target, 3_100).hit, true);
+  assert.equal(target.damageSeq, 2);
+
+  const model = createAquaLifeRenderSnapshot(state).fish.find(item => item.id === target.id);
+  assert.equal(model?.damageSeq, 2);
+  assert.equal(model?.lastDamage, 3);
+});

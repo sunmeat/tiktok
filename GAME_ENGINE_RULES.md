@@ -154,4 +154,6 @@ Fish must swim like real fish rather than glide at constant speed. The simulatio
 - Place a compact, translucent HOW TO PLAY panel at the lower-left of the scene and a compact, translucent leaderboard at the lower-right. Keep both panels readable on phone screens and do not let either panel become a full page column.
 - The HOW TO PLAY and leaderboard panels are positioned inside the 9:16 sea rectangle (a centered contain stage), at its lower-left and lower-right corners, not at the corners of the browser window. Their sizes scale with that rectangle.
 - AquaLife starts with 7 jellyfish.
+- The leaderboard shows only the top 5 players, with no streamer username caption, no online count and no "not following" badge (a follow badge is shown only for followers).
+- Fish labels show nickname and HP only (no ATK). When a fish bites another fish, a floating red damage number such as "-1" rises from the bitten fish and fades out (RPG style); the renderer uses a bounded pool of 24 numbers.
 - The leaderboard shows gifts and likes, never comment counts. Rank by gifts descending first, then likes descending as the tie-breaker.

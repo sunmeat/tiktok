@@ -10,7 +10,6 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
   const [gift, setGift] = useState<GiftAlert | null>(null);
-  const [username, setUsername] = useState("playing_in.chat");
   const aquaEventsRef = useRef<NormalizedGameEvent[]>([]);
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
@@ -19,9 +18,6 @@ function Arena() {
     if (message.type === "aqualife_event") {
       aquaEventsRef.current.push(message.data);
       if (aquaEventsRef.current.length > 2000) aquaEventsRef.current.splice(0, aquaEventsRef.current.length - 2000);
-    }
-    if (message.type === "connection_status") {
-      setUsername(message.data.username);
     }
   };
 
@@ -51,7 +47,7 @@ function Arena() {
     return () => { disposed = true; window.clearTimeout(timer); socket?.close(); };
   }, []);
 
-  const ranked = useMemo(() => [...players].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes).slice(0, 8), [players]);
+  const ranked = useMemo(() => [...players].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes).slice(0, 5), [players]);
 
   return <main className="arena">
     <PixiEffects gift={gift} />
@@ -68,15 +64,14 @@ function Arena() {
         </ul>
       </aside>
     <aside className="leaderboard overlay-panel" aria-label="Viewer leaderboard">
-      <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong><span className="online-count"><i />{players.length.toLocaleString("en-US")} ONLINE</span></header>
-      <div className="rank-caption">@{username}</div>
+      <header className="leaderboard-head"><strong>🏆 LEADERBOARD</strong></header>
       <div className="players-list">
         {!ranked.length && <div className="empty">Waiting for viewers…</div>}
         {ranked.map((player,index) => <article className={`player-card rank-${index+1}`} key={player.uniqueId}>
           <div className="rank">{String(index+1).padStart(2,"0")}</div>
           <Avatar src={player.profilePictureUrl} className="player-avatar" />
           <div className="player-main">
-            <div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span><span className={`follow-badge ${player.isFollowing ? "" : "no"}`}>{player.isFollowing ? "✓ FOLLOW" : "NOT FOLLOWING"}</span></div>
+            <div className="player-topline"><span className="player-name" title={player.nickname}>{player.nickname}</span>{player.isFollowing && <span className="follow-badge">✓ FOLLOW</span>}</div>
             <div className="stats"><span>🎁 <b>{player.gifts.toLocaleString("en-US")}</b></span><span>♥ <b>{player.likes.toLocaleString("en-US")}</b></span></div>
           </div>
         </article>)}
