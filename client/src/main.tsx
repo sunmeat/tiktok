@@ -8,7 +8,7 @@ const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
 
 function Arena() {
   const [players, setPlayers] = useState<ArenaPlayer[]>([]);
-  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>(() => {\n    try {\n      const saved = JSON.parse(localStorage.getItem("tiktok-live-arena-chat-v1") || "[]");\n      return Array.isArray(saved) ? saved.slice(-300) as ChatMessage[] : [];\n    } catch { return []; }\n  });
   const [gift, setGift] = useState<GiftAlert | null>(null);
   const [serverOnline, setServerOnline] = useState(false);
   const [tiktokOnline, setTiktokOnline] = useState(false);
@@ -17,7 +17,7 @@ function Arena() {
   const handler = useRef<(message: ServerMessage) => void>(() => {});
   handler.current = message => {
     if (message.type === "init" || message.type === "update_leaderboard") setPlayers(message.data);
-    if (message.type === "chat_message") setChat(old => [...old.slice(-199), message.data]);
+    if (message.type === "chat_message") setChat(old => [...old.slice(-299), message.data]);
     if (message.type === "gift_alert") setGift(message.data);
     if (message.type === "connection_status") {
       setTiktokOnline(message.data.connected);
