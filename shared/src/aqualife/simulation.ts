@@ -62,9 +62,13 @@ function ensureFish(state: AquaLifeGameState, participant: AquaLifeParticipant, 
     y: state.world.height / 2,
     directionX: 1,
     directionY: 0,
-    speedPxPerSecond: 0,
+    baseSpeedPxPerSecond: config.baseSpeedPxPerSecond,
+    speedPxPerSecond: config.baseSpeedPxPerSecond,
+    baseSize: config.baseFishSize,
     size: config.baseFishSize,
     hp: config.initialHp,
+    maxHp: null,
+    baseAttackDamage: config.baseBiteDamage,
     attackDamage: config.baseBiteDamage,
     isAiControlled: !participant.isActive,
     likesPerSecondSamples: [],
@@ -80,7 +84,11 @@ export function processGameEvent(
   event: NormalizedGameEvent,
   config: AquaLifeConfig = AQUALIFE_CONFIG
 ): void {
-  if (event.dedupeKey) {\n    if (state.processedEventIds.includes(event.dedupeKey)) return;\n    state.processedEventIds.push(event.dedupeKey);\n    if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();\n  }
+  if (event.dedupeKey) {
+    if (state.processedEventIds.includes(event.dedupeKey)) return;
+    state.processedEventIds.push(event.dedupeKey);
+    if (state.processedEventIds.length > config.maxQueuedEvents) state.processedEventIds.shift();
+  }
   if (event.type === "viewer-left") {
     const participant = state.participants[event.userId];
     if (participant?.isActive) {
