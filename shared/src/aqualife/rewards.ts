@@ -53,7 +53,7 @@ export function updateLikeActivitySpeed(
   }
   const totalInWindow = fish.likesPerSecondSamples.reduce((sum, sample) => sum + sample.count, 0);
   const likesPerSecond = totalInWindow * 1000 / Math.max(1, config.likeActivityWindowMs);
-  const rawTarget = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond * fish.individualSpeedMultiplier;
+  const rawTarget = config.likeSpeedPxPerSecondPerLikePerSecond * likesPerSecond;
   fish.speedTargetPxPerSecond = Math.max(
     config.minSpeedPxPerSecond,
     Math.min(config.maxSpeedPxPerSecond, rawTarget)
