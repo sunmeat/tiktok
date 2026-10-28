@@ -626,6 +626,26 @@ test("idle fish keep cruising without likes and change heading gradually", () =>
 });
 
 
+test("departed fish fade during the final part of a 30-second grace period", () => {
+  const state = createAquaLifeState(540, 960, 0);
+  const join = normalizeTikTokEvent("member", {
+    msgId: "departing-viewer-join",
+    user: { userId: "departing-viewer", nickname: "Leaving viewer" }
+  }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["departing-viewer"];
+  assert.ok(deactivateParticipant(state, "departing-viewer"));
+  assert.equal(fish.leaveAtMs, 30_000);
+
+  stepAquaLife(state, 50, 28_800, () => 0.5);
+  assert.equal(createAquaLifeRenderSnapshot(state).fish[0].alpha, 1);
+  stepAquaLife(state, 50, 29_400, () => 0.5);
+  assert.ok(Math.abs(createAquaLifeRenderSnapshot(state).fish[0].alpha - 0.5) < 1e-10);
+  stepAquaLife(state, 50, 30_000, () => 0.5);
+  assert.equal(state.fish["departing-viewer"], undefined);
+});
+
 test("respawning fish continue moving even when they have no recent likes", () => {
   const state = createAquaLifeState(540, 960);
   const join = normalizeTikTokEvent("member", {
