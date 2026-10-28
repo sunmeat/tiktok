@@ -34,9 +34,14 @@ export interface AquaLifeFish {
   y: number;
   directionX: number;
   directionY: number;
+  baseSpeedPxPerSecond: number;
   speedPxPerSecond: number;
+  baseSize: number;
   size: number;
   hp: number;
+  /** null means there is no gameplay maximum HP. */
+  maxHp: number | null;
+  baseAttackDamage: number;
   attackDamage: number;
   isAiControlled: boolean;
   likesPerSecondSamples: Array<{ atMs: number; count: number }>;
@@ -74,6 +79,8 @@ export interface AquaLifeGameState {
 export interface NormalizedGameEvent {
   type: NormalizedGameEventType;
   eventId: string;
+  /** Provider event ID namespaced by event type; null when the connector supplied no stable ID. */
+  dedupeKey: string | null;
   userId: string;
   nickname: string;
   avatarUrl: string;
@@ -95,6 +102,7 @@ export interface FishRenderModel {
   rotation: number;
   size: number;
   hp: number;
+  maxHp: number | null;
   status: FishStatus;
 }
 
