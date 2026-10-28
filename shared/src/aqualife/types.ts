@@ -40,6 +40,7 @@ export interface AquaLifeFish {
   turnRateRadiansPerSecond: number;
   individualSpeedMultiplier: number;
   speedTargetPxPerSecond: number;
+  lastSpeedUpdateAtMs: number;
   baseSpeedPxPerSecond: number;
   speedPxPerSecond: number;
   baseSize: number;
