@@ -7,6 +7,7 @@ import type {
   AquaLifeGameState,
   AquaLifeJellyfish,
   AquaLifeParticipant,
+  AquaLifeRenderSnapshot,
   NormalizedGameEvent
 } from "./types.js";
 
@@ -258,4 +259,28 @@ export function stepAquaLife(
 function recalculateCounts(state: AquaLifeGameState): void {
   state.activeParticipantCount = Object.values(state.participants).filter(participant => participant.isActive).length;
   state.livingFishCount = Object.values(state.fish).filter(fish => fish.status !== "dead").length;
+}
+
+
+/** Builds a renderer-only snapshot; rotation follows the current swimming direction. */
+export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLifeRenderSnapshot {
+  return {
+    world: { ...state.world },
+    fish: Object.values(state.fish).map(fish => ({
+      id: fish.id,
+      species: fish.species,
+      nickname: fish.nickname,
+      avatarUrl: fish.avatarUrl,
+      x: fish.x,
+      y: fish.y,
+      rotation: Math.atan2(fish.directionY, fish.directionX),
+      size: fish.size,
+      hp: fish.hp,
+      maxHp: fish.maxHp,
+      status: fish.status
+    })),
+    jellyfish: Object.values(state.jellyfish).map(jellyfish => ({ ...jellyfish })),
+    activeParticipantCount: state.activeParticipantCount,
+    livingFishCount: state.livingFishCount
+  };
 }
