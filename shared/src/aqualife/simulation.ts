@@ -229,6 +229,7 @@ export function processGameEvent(
   }
   const participant = ensureParticipant(state, event, config);
   if (!participant) return;
+  if (event.isFollowing !== undefined) participant.isFollowing = event.isFollowing;
   if (event.type === "viewer-joined") {
     participant.isActive = true;
     const fish = createFishForParticipant(state, participant, config);
