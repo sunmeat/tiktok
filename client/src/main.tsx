@@ -104,7 +104,7 @@ function PixiEffects({gift}:{gift:GiftAlert|null}) {
     const start = async () => {
       const pixi = new Application();
       await pixi.init({backgroundAlpha:0,antialias:true,autoDensity:true,resolution:Math.min(window.devicePixelRatio || 1,2),resizeTo:element});
-      if (disposed) { pixi.destroy(true); return; }
+      if (disposed) { pixi.destroy({ removeView: true }); return; }
       app = pixi;
       element.appendChild(pixi.canvas);
       const layer = new Container();
@@ -134,7 +134,7 @@ function PixiEffects({gift}:{gift:GiftAlert|null}) {
       });
     };
     void start();
-    return () => {disposed=true;particles.length=0;app?.destroy(true);};
+    return () => {disposed=true;particles.length=0;app?.destroy({ removeView: true }, { children: true });};
   },[]);
   return <div className="pixi-effects" ref={host} aria-hidden="true" />;
 }
