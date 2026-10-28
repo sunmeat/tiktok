@@ -8,6 +8,8 @@ interface FishView {
   tail: Graphics;
   body: Graphics;
   label: Text;
+  comment: Text;
+  commentUntilMs: number;
   lastLabel: string;
   lastFeedback: FishRenderModel["rewardFeedback"];
   lastCombatFeedback: FishRenderModel["combatFeedback"];
@@ -33,6 +35,16 @@ export class AquaLifePixiAdapter {
     fontSize: 12,
     fontWeight: "700",
     stroke: { color: "#062332", width: 3 }
+  });
+  private readonly commentStyle = new TextStyle({
+    fill: "#ffffff",
+    fontFamily: "Arial",
+    fontSize: 11,
+    fontWeight: "600",
+    stroke: { color: "#062332", width: 2.5 },
+    wordWrap: true,
+    wordWrapWidth: 150,
+    breakWords: true
   });
 
   constructor(private readonly stage: Container) {
@@ -69,12 +81,15 @@ export class AquaLifePixiAdapter {
       view.tail.scale.set((0.82 + Math.sin(view.phase) * 0.22) * bodyScale, bodyScale);
       view.tail.rotation = Math.sin(view.phase) * 0.18;
       view.shadow.scale.set(bodyScale, bodyScale);
-      const label = `${fish.nickname} · ${fish.hp} HP`;
+      const label = `${fish.nickname} · HP ${fish.hp} · ATK ${fish.attackDamage}`;
       if (label !== view.lastLabel) {
         view.label.text = label;
         view.lastLabel = label;
       }
       view.label.position.set(0, 20 * bodyScale);
+      view.comment.rotation = -fish.rotation;
+      view.comment.position.set(0, -25 * bodyScale);
+      view.comment.alpha = view.commentUntilMs > snapshot.nowMs ? Math.min(1, (view.commentUntilMs - snapshot.nowMs) / 450) : 0;
       if (fish.rewardFeedback !== view.lastFeedback || fish.combatFeedback !== view.lastCombatFeedback) {
         view.body.tint =
           fish.rewardFeedback === "growth" ? 0xffe08a
@@ -114,6 +129,15 @@ export class AquaLifePixiAdapter {
       view.root.destroy({ children: true });
       this.jellyfishViews.delete(id);
     }
+  }
+
+  showComment(fishId: string, message: string, nowMs: number): void {
+    const view = this.fishViews.get(fishId);
+    if (!view || !message.trim()) return;
+    const clean = message.trim().replace(/\\s+/g, " ").slice(0, 140);
+    view.comment.text = clean;
+    view.comment.alpha = 1;
+    view.commentUntilMs = nowMs + 4_000;
   }
 
   destroy(): void {
@@ -197,11 +221,14 @@ export class AquaLifePixiAdapter {
     const body = new Graphics();
     this.drawFishTail(tail, fish.species);
     this.drawFishBody(body, fish.species);
-    const label = new Text({ text: `${fish.nickname} · ${fish.hp} HP`, style: this.labelStyle });
+    const label = new Text({ text: `${fish.nickname} · HP ${fish.hp} · ATK ${fish.attackDamage}`, style: this.labelStyle });
     label.anchor.set(0.5, 0);
-    root.addChild(shadow, tail, body, label);
+    const comment = new Text({ text: "", style: this.commentStyle });
+    comment.anchor.set(0.5, 1);
+    comment.alpha = 0;
+    root.addChild(shadow, tail, body, label, comment);
     this.root.addChild(root);
-    const view: FishView = { root, shadow, tail, body, label, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null, lastSpecies: fish.species, phase: Math.random() * Math.PI * 2 };
+    const view: FishView = { root, shadow, tail, body, label, comment, commentUntilMs: 0, lastLabel: label.text, lastFeedback: null, lastCombatFeedback: null, lastSpecies: fish.species, phase: Math.random() * Math.PI * 2 };
     this.fishViews.set(fish.id, view);
     return view;
   }
