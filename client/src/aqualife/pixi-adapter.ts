@@ -1,23 +1,88 @@
-import type { AquaLifeGameState, AquaLifeRenderSnapshot } from "@tiktok-arena/shared";
+import { Container, Graphics, Text, TextStyle } from "pixi.js";
+import type { AquaLifeRenderSnapshot, FishRenderModel } from "@tiktok-arena/shared";
 
-/** Keeps rendering data derived from simulation state without mutating gameplay. */
-export function createAquaLifeRenderSnapshot(state: AquaLifeGameState): AquaLifeRenderSnapshot {
-  return {
-    world: { ...state.world },
-    fish: Object.values(state.fish).map(fish => ({
-      id: fish.id,
-      species: fish.species,
-      nickname: fish.nickname,
-      avatarUrl: fish.avatarUrl,
-      x: fish.x,
-      y: fish.y,
-      rotation: Math.atan2(fish.directionY, fish.directionX),
-      size: fish.size,
-      hp: fish.hp,
-      status: fish.status
-    })),
-    jellyfish: Object.values(state.jellyfish).map(jellyfish => ({ ...jellyfish })),
-    activeParticipantCount: state.activeParticipantCount,
-    livingFishCount: state.livingFishCount
-  };
+interface FishView {
+  root: Container;
+  body: Graphics;
+  label: Text;
+  lastLabel: string;
+}
+
+/**
+ * Stateful PixiJS view adapter. Simulation owns gameplay data; this class only
+ * creates and updates reusable display objects. Call destroy() when the scene ends.
+ */
+export class AquaLifePixiAdapter {
+  readonly root = new Container();
+  private readonly fishViews = new Map<string, FishView>();
+  private readonly labelStyle = new TextStyle({
+    fill: "#e8fbff",
+    fontFamily: "Arial",
+    fontSize: 12,
+    fontWeight: "700",
+    stroke: { color: "#05202b", width: 3 }
+  });
+
+  constructor(private readonly stage: Container) {
+    this.stage.addChild(this.root);
+  }
+
+  update(snapshot: AquaLifeRenderSnapshot, viewportWidth: number, viewportHeight: number): void {
+    const scale = Math.min(
+      viewportWidth / Math.max(1, snapshot.world.width),
+      viewportHeight / Math.max(1, snapshot.world.height)
+    );
+    this.root.scale.set(scale);
+    this.root.position.set(
+      (viewportWidth - snapshot.world.width * scale) / 2,
+      (viewportHeight - snapshot.world.height * scale) / 2
+    );
+
+    const seen = new Set<string>();
+    for (const fish of snapshot.fish) {
+      seen.add(fish.id);
+      const view = this.fishViews.get(fish.id) ?? this.createFishView(fish);
+      view.root.position.set(fish.x, fish.y);
+      view.root.rotation = fish.rotation;
+      const bodyScale = Math.max(0.2, fish.size);
+      view.body.scale.set(bodyScale);
+      const label = `${fish.nickname} · ${fish.hp} HP`;
+      if (label !== view.lastLabel) {
+        view.label.text = label;
+        view.lastLabel = label;
+      }
+      view.label.position.set(0, 18 * bodyScale);
+      view.root.alpha = fish.status === "dead" ? 0 : 1;
+    }
+
+    for (const [id, view] of this.fishViews) {
+      if (seen.has(id)) continue;
+      view.root.destroy({ children: true });
+      this.fishViews.delete(id);
+    }
+  }
+
+  destroy(): void {
+    for (const view of this.fishViews.values()) view.root.destroy({ children: true });
+    this.fishViews.clear();
+    this.root.destroy({ children: true });
+  }
+
+  private createFishView(fish: FishRenderModel): FishView {
+    const root = new Container();
+    const body = new Graphics()
+      .ellipse(0, 0, 15, 8)
+      .fill(fish.species === "standard-gray" ? "#9aa9b1" : "#41d8ee")
+      .poly([11, 0, 21, -7, 21, 7])
+      .fill(fish.species === "standard-gray" ? "#7f9099" : "#1ca9d1")
+      .circle(6, -2, 1.5)
+      .fill("#06222b");
+    const label = new Text({ text: `${fish.nickname} · ${fish.hp} HP`, style: this.labelStyle });
+    label.anchor.set(0.5, 0);
+    root.addChild(body, label);
+    this.root.addChild(root);
+    const view = { root, body, label, lastLabel: label.text };
+    this.fishViews.set(fish.id, view);
+    return view;
+  }
 }
