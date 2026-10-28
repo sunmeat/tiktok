@@ -6,6 +6,14 @@ export interface AquaLifeConfig {
   readonly likeActivityWindowMs: number;
   readonly baseFishSize: number;
   readonly baseSpeedPxPerSecond: number;
+  readonly minSpeedPxPerSecond: number;
+  readonly maxSpeedPxPerSecond: number;
+  readonly speedSmoothingPerSecond: number;
+  readonly minWanderIntervalSeconds: number;
+  readonly maxWanderIntervalSeconds: number;
+  readonly maxTurnRateRadiansPerSecond: number;
+  readonly separationRadius: number;
+  readonly separationStrength: number;
   readonly baseBiteDamage: number;
   readonly jellyfishDamage: number;
   readonly defaultWorldWidth: number;
@@ -32,6 +40,14 @@ export const AQUALIFE_CONFIG: AquaLifeConfig = Object.freeze({
   likeActivityWindowMs: 5_000,
   baseFishSize: 1,
   baseSpeedPxPerSecond: 0,
+  minSpeedPxPerSecond: 0,
+  maxSpeedPxPerSecond: 120,
+  speedSmoothingPerSecond: 2.5,
+  minWanderIntervalSeconds: 1.2,
+  maxWanderIntervalSeconds: 3.8,
+  maxTurnRateRadiansPerSecond: 2.4,
+  separationRadius: 26,
+  separationStrength: 0.35,
   baseBiteDamage: 1,
   jellyfishDamage: 1,
   defaultWorldWidth: 540,
