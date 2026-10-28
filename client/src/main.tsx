@@ -60,8 +60,18 @@ function Arena() {
   return <main className="arena">
     <PixiEffects gift={gift} />
     <section className="panel aquarium-panel">
-      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 01</div><h2>LIVE AQUARIUM</h2><div className="rank-caption">Real-time reef simulation</div></div><Status online={serverOnline} onlineText="SIMULATION LIVE" offlineText="WAITING FOR LIVE" /></header>
+      <header className="panel-head"><div><div className="eyebrow">AQUALIFE / 01</div><h2>LIVE AQUARIUM</h2></div></header>
       <AquaLifeScene eventsRef={aquaEventsRef} />
+      <aside className="aquarium-guide" aria-label="How to play">
+        <div className="guide-title">HOW TO PLAY</div>
+        <ul>
+          <li><b>More likes</b><span>Faster fish</span></li>
+          <li><b>Every 5 likes</b><span>+1 HP</span></li>
+          <li><b>Every 100 likes</b><span>Fish grows</span></li>
+          <li><b>Gifts</b><span>Stronger attacks</span></li>
+          <li><b>Likes or gifts</b><span>More health</span></li>
+        </ul>
+      </aside>
     </section>
     <aside className="panel leaderboard">
       <header className="panel-head"><div><div className="eyebrow">ARENA NETWORK / 02</div><h2>🏆 LIVE LEADERBOARD</h2><div className="rank-caption">@{username} · viewer activity</div></div><Status online={tiktokOnline} onlineText="LIVE" offlineText="STANDBY" /></header>
