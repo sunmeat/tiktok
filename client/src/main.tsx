@@ -107,7 +107,7 @@ function PixiEffects({gift}:{gift:GiftAlert|null}) {
     if (!element) return;
     let app: Application | undefined;
     let disposed = false;
-    let lastGift: GiftAlert | null = null;
+    let lastGiftId = "";
     const particles: Array<{shape:Graphics;vx:number;vy:number;life:number}> = [];
     const start = async () => {
       const pixi = new Application();
@@ -120,8 +120,8 @@ function PixiEffects({gift}:{gift:GiftAlert|null}) {
       pixi.ticker.add(ticker => {
         const current = giftRef.current;
         const id = current ? `${current.uniqueId}:${current.giftName}:${current.count}` : "";
-        if (current && id !== lastGift) {
-          lastGift = id;
+        if (current && id !== lastGiftId) {
+          lastGiftId = id;
           const label = new Text({text:`✦ ${current.nickname} · ${current.giftName} ×${current.count}`,style:new TextStyle({fill:"#dffaff",fontFamily:"Arial",fontSize:18,fontWeight:"700",dropShadow:{color:"#438bff",blur:8,distance:0}})});
           label.anchor.set(.5);
           label.x = pixi.screen.width / 2;
