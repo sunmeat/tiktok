@@ -285,6 +285,32 @@ function attachEvents(connection: TikTokLiveConnection, username: string): void 
     if (event) updatePlayer(userId(data.user), 0, event.avatarUrl, event.nickname);
   });
   const webcastEventNames = WebcastEvent as unknown as Record<string, string>;
+  // Room-user snapshots seed the aquarium with viewers already present when we connect.
+  let lastRoomSnapshotAt = 0;
+  const roomUserEventName = webcastEventNames.ROOM_USER;
+  if (roomUserEventName) {
+    onConnectorEvent(roomUserEventName, (data: RecordData) => {
+      const now = Date.now();
+      if (now - lastRoomSnapshotAt < 10_000) return;
+      lastRoomSnapshotAt = now;
+      const candidates = [
+        ...(Array.isArray(data.topViewers) ? data.topViewers : []),
+        ...(Array.isArray(data.ranks) ? data.ranks : []),
+        ...(Array.isArray(data.users) ? data.users : []),
+        ...(Array.isArray(data.viewerList) ? data.viewerList : [])
+      ];
+      const seen = new Set<string>();
+      for (const candidateValue of candidates) {
+        const candidate = candidateValue as RecordData;
+        const viewer = candidate.user ?? candidate.viewer ?? candidate;
+        const event = ingestEvent("member", { user: viewer });
+        if (!event || seen.has(event.userId)) continue;
+        seen.add(event.userId);
+        updatePlayer(userId(viewer), 0, event.avatarUrl, event.nickname);
+      }
+      if (seen.size > 0) console.log(`[tiktok] Seeded AquaLife with ${seen.size} viewers from room snapshot.`);
+    });
+  }
   for (const key of ["LEAVE", "USER_LEAVE", "MEMBER_LEAVE", "VIEWER_LEAVE"]) {
     const leaveEventName = webcastEventNames[key];
     if (leaveEventName) onConnectorEvent(leaveEventName, (data: RecordData) => handleViewerLeft(data));
