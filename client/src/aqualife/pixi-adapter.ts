@@ -50,6 +50,7 @@ export class AquaLifePixiAdapter {
       const view = this.fishViews.get(fish.id) ?? this.createFishView(fish);
       view.root.position.set(fish.x, fish.y);
       view.root.rotation = fish.rotation;
+      view.label.rotation = -fish.rotation;
       view.phase += 0.12 + Math.min(0.14, fish.size * 0.012);
       view.tail.scale.x = 0.82 + Math.sin(view.phase) * 0.22;
       view.tail.rotation = Math.sin(view.phase) * 0.18;
