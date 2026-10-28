@@ -48,7 +48,7 @@ function Arena() {
     return () => { disposed = true; window.clearTimeout(timer); socket?.close(); };
   }, []);
 
-  const ranked = useMemo(() => [...players].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes).slice(0, 5), [players]);
+  const ranked = useMemo(() => [...players].sort((a, b) => b.gifts - a.gifts || b.likes - a.likes).slice(0, 4), [players]);
 
   return <main className="arena">
     <PixiEffects gift={gift} />
@@ -59,7 +59,7 @@ function Arena() {
         <div className="guide-title">GIFT POWER-UPS</div>
         <ul>
           {GIFT_GUIDE.map(gift => <li key={gift.name}>
-            <b><span className="gift-icon" aria-hidden="true">{gift.emoji}</span> {gift.name}</b>
+            <b><img className="gift-icon-image" src={gift.imageUrl} alt="" loading="lazy" onError={event => { event.currentTarget.style.display = "none"; }} /> <span className="gift-name">{gift.name}</span></b>
             {gift.boost.hp > 0
               ? <span className="boost hp">+{gift.boost.hp.toLocaleString("en-US")} HP</span>
               : <span className="boost atk">+{gift.boost.attack} ATK</span>}
