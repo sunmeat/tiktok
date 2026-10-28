@@ -229,7 +229,14 @@ export function processGameEvent(
   }
   const participant = ensureParticipant(state, event, config);
   if (!participant) return;
-  if (event.isFollowing !== undefined) participant.isFollowing = event.isFollowing;
+  if (event.isFollowing !== undefined) {
+    participant.isFollowing = event.isFollowing;
+    // Keep the rendered fish in sync immediately, including for an already-present viewer.
+    if (participant.unlockedSpecies.length === 0 && !participant.subscribed) {
+      const existingFish = state.fish[event.userId];
+      if (existingFish) existingFish.species = event.isFollowing ? "dory" : "standard-gray";
+    }
+  }
   if (event.type === "viewer-joined") {
     participant.isActive = true;
     const fish = createFishForParticipant(state, participant, config);
