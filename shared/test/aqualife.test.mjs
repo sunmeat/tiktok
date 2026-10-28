@@ -283,3 +283,91 @@ test("like activity sample history is capped for repeated event bursts", () => {
     AQUALIFE_CONFIG.maxLikeSamplesPerFish
   );
 });
+
+
+test("HP rewards respect the 4/5/6 like boundaries", () => {
+  for (const [likes, expectedHp, expectedRemainder] of [
+    [4, 5, 4],
+    [5, 6, 0],
+    [6, 6, 1]
+  ]) {
+    const state = createAquaLifeState();
+    const event = normalizeTikTokEvent("like", {
+      msgId: "hp-boundary-" + likes,
+      user: { userId: "hp-boundary-viewer", nickname: "Viewer" },
+      likeCount: likes
+    }, 1_000);
+    assert.ok(event);
+    processGameEvent(state, event);
+    assert.equal(state.fish["hp-boundary-viewer"].hp, expectedHp);
+    assert.equal(state.participants["hp-boundary-viewer"].likesRemainderForHp, expectedRemainder);
+  }
+});
+
+test("size grows by one percent at cumulative 100-like thresholds", () => {
+  const state = createAquaLifeState();
+  const sendLikes = (id, count, atMs) => {
+    const event = normalizeTikTokEvent("like", {
+      msgId: id,
+      user: { userId: "growth-viewer", nickname: "Viewer" },
+      likeCount: count
+    }, atMs);
+    assert.ok(event);
+    processGameEvent(state, event);
+  };
+
+  sendLikes("growth-99", 99, 1_000);
+  const fish = state.fish["growth-viewer"];
+  assert.equal(fish.size, fish.baseSize);
+  assert.equal(state.participants["growth-viewer"].likesTotal, 99);
+
+  sendLikes("growth-100", 1, 1_100);
+  assert.ok(Math.abs(fish.size - fish.baseSize * 1.01) < 1e-10);
+  assert.equal(fish.lastGrowthAtMs, 1_100);
+
+  sendLikes("growth-101", 1, 1_200);
+  assert.ok(Math.abs(fish.size - fish.baseSize * 1.01) < 1e-10);
+  assert.equal(state.participants["growth-viewer"].likesTotal, 101);
+});
+
+test("growth compounds at 200 likes and remains after death and respawn", () => {
+  const state = createAquaLifeState();
+  const event = normalizeTikTokEvent("like", {
+    msgId: "growth-200",
+    user: { userId: "persistent-growth", nickname: "Viewer" },
+    likeCount: 200
+  }, 1_000);
+  assert.ok(event);
+  processGameEvent(state, event);
+
+  const fish = state.fish["persistent-growth"];
+  const grownSize = fish.size;
+  assert.ok(Math.abs(grownSize - fish.baseSize * 1.01 ** 2) < 1e-10);
+
+  fish.hp = 0;
+  fish.status = "dead";
+  fish.respawnAtMs = 5_000;
+  stepAquaLife(state, 50, 5_000, () => 0.5);
+
+  assert.equal(fish.status, "respawning");
+  assert.equal(fish.hp, 1);
+  assert.equal(fish.size, grownSize);
+  assert.equal(state.participants["persistent-growth"].likesTotal, 200);
+});
+
+test("render snapshots expose short reward feedback without recreating fish views", () => {
+  const state = createAquaLifeState();
+  const event = normalizeTikTokEvent("like", {
+    msgId: "feedback-growth",
+    user: { userId: "feedback-viewer", nickname: "Viewer" },
+    likeCount: 100
+  }, 1_000);
+  assert.ok(event);
+  processGameEvent(state, event);
+
+  const snapshot = createAquaLifeRenderSnapshot(state);
+  const fish = snapshot.fish.find(item => item.id === "fish-1");
+  assert.ok(fish);
+  assert.equal(fish.rewardFeedback, "growth");
+  assert.equal(snapshot.nowMs, state.nowMs);
+});
