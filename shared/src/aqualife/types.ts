@@ -60,6 +60,8 @@ export interface AquaLifeFish {
   attackAnimationUntilMs: number;
   lastJellyfishHitAtMs: number | null;
   respawnAtMs: number | null;
+  /** Scheduled removal after a viewer leaves; the final 1.2 seconds fade out. */
+  leaveAtMs: number | null;
   buffs: AquaLifeBuff[];
 }
 
@@ -119,6 +121,7 @@ export interface FishRenderModel {
   maxHp: number | null;
   attackDamage: number;
   status: FishStatus;
+  alpha: number;
   rewardFeedback: "activity" | "heal" | "growth" | null;
   combatFeedback: "attack" | "hurt" | null;
 }
