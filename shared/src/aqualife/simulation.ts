@@ -87,10 +87,10 @@ export function createFishForParticipant(
     nickname: participant.nickname,
     avatarUrl: participant.avatarUrl,
     species: preferredSpecies,
-    status: "spawning",
-    x: state.world.width / 2,
-    y: state.world.height / 2,
-    directionX: 1,
+    status: "respawning",
+    x: Math.random() < 0.5 ? -Math.max(20, config.baseFishSize * 20) : state.world.width + Math.max(20, config.baseFishSize * 20),
+    y: state.world.height * (0.08 + Math.random() * 0.84),
+    directionX: Math.random() < 0.5 ? 1 : -1,
     directionY: 0,
     targetDirectionX: Math.cos(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
     targetDirectionY: Math.sin(((state.nextEntityNumber - 1) % 12) * Math.PI / 6),
@@ -280,7 +280,7 @@ export function stepAquaLife(
         fish.directionY = dy / (distance || 1);
         // Respawn travel must not depend on like activity: otherwise an idle fish
         // can crawl a fraction of a pixel per frame and appear frozen at center.
-        const respawnSpeed = Math.max(24, fish.baseSpeedPxPerSecond + fish.speedPxPerSecond);
+        const respawnSpeed = Math.max(120, fish.baseSpeedPxPerSecond + fish.speedPxPerSecond);
         const travel = Math.min(distance, respawnSpeed * boundedDelta / 1000);
         fish.x += fish.directionX * travel;
         fish.y += fish.directionY * travel;
