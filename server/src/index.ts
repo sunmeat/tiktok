@@ -7,7 +7,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { ControlEvent, TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
 import type { ArenaPlayer, ChatMessage, GiftAlert, ServerMessage } from "@tiktok-arena/shared";
 
-type RecordData = Record<string, any>;
+type RecordData = any;
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = http.createServer(app);
