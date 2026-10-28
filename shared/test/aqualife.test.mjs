@@ -9,6 +9,7 @@ import {
   createAquaLifeState,
   deactivateParticipant,
   FISH_SPECIES_CATALOG,
+  giftBoostFor,
   getFishSpeciesDefinition,
   createAquaLifeRenderSnapshot,
   normalizeTikTokEvent,
@@ -938,4 +939,76 @@ test("following the streamer upgrades an existing gray fish to Dory", () => {
   processGameEvent(state, follow);
   assert.equal(state.fish["follow-upgrade-viewer"].id, fish.id);
   assert.equal(state.fish["follow-upgrade-viewer"].species, "dory");
+});
+
+
+test("all six configured gifts grant the documented HP and attack boosts", () => {
+  const state = createAquaLifeState();
+  const join = normalizeTikTokEvent("member", {
+    msgId: "gift-test-join",
+    user: { userId: "gift-test-viewer", uniqueId: "gift_test", nickname: "Gift Tester" }
+  }, 1_000);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["gift-test-viewer"];
+  assert.equal(fish.hp, AQUALIFE_CONFIG.initialHp);
+  assert.equal(fish.attackDamage, AQUALIFE_CONFIG.baseBiteDamage);
+
+  const gifts = [
+    ["Rose 🌹", 100, 0],
+    ["Finger Heart", 500, 0],
+    ["Panther", 1000, 0],
+    ["Flame Heart", 0, 5],
+    ["Pomegranate", 0, 25],
+    ["Squirrel", 0, 50]
+  ];
+  let expectedHp = AQUALIFE_CONFIG.initialHp;
+  let expectedAttack = AQUALIFE_CONFIG.baseBiteDamage;
+  for (const [giftName, hp, attack] of gifts) {
+    const boost = giftBoostFor(undefined, giftName);
+    assert.ok(boost, `expected a configured boost for ${giftName}`);
+    assert.equal(boost.hp, hp);
+    assert.equal(boost.attack, attack);
+    const event = normalizeTikTokEvent("gift", {
+      msgId: `gift-test-${giftName}`,
+      user: { userId: "gift-test-viewer", uniqueId: "gift_test", nickname: "Gift Tester" },
+      giftName,
+      repeatCount: 1
+    }, 2_000 + expectedHp + expectedAttack);
+    assert.ok(event);
+    processGameEvent(state, event);
+    expectedHp += hp;
+    expectedAttack += attack;
+    assert.equal(fish.hp, expectedHp, `${giftName} should change HP`);
+    assert.equal(fish.attackDamage, expectedAttack, `${giftName} should change attack`);
+  }
+});
+
+test("follow status from TikTok join events changes an existing fish between Dory and gray", () => {
+  const state = createAquaLifeState();
+  const joinedFollowing = normalizeTikTokEvent("member", {
+    msgId: "follow-status-yes",
+    user: {
+      userId: "follow-status-viewer",
+      nickname: "Follower",
+      followInfo: { followStatus: 1 }
+    }
+  }, 1_000);
+  assert.ok(joinedFollowing);
+  assert.equal(joinedFollowing.isFollowing, true);
+  processGameEvent(state, joinedFollowing);
+  assert.equal(state.fish["follow-status-viewer"].species, "dory");
+
+  const joinedNotFollowing = normalizeTikTokEvent("member", {
+    msgId: "follow-status-no",
+    user: {
+      userId: "follow-status-viewer",
+      nickname: "Follower",
+      followInfo: { followStatus: 0 }
+    }
+  }, 2_000);
+  assert.ok(joinedNotFollowing);
+  assert.equal(joinedNotFollowing.isFollowing, false);
+  processGameEvent(state, joinedNotFollowing);
+  assert.equal(state.fish["follow-status-viewer"].species, "standard-gray");
 });
