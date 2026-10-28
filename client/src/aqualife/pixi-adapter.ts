@@ -37,7 +37,7 @@ export class AquaLifePixiAdapter {
     stroke: { color: "#062332", width: 3 }
   });
   private readonly commentStyle = new TextStyle({
-    fill: "#ffffff",
+    fill: "#ff9ce8",
     fontFamily: "Arial",
     fontSize: 11,
     fontWeight: "600",
