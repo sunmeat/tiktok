@@ -28,7 +28,7 @@ export function updateFishMovement(
     fish.targetDirectionX = Math.cos(heading);
     fish.targetDirectionY = Math.sin(heading);
     const intervalRange = Math.max(0, config.maxWanderIntervalSeconds - config.minWanderIntervalSeconds);
-    fish.wanderTimeRemaining = Math.max(2.8, config.minWanderIntervalSeconds + random() * intervalRange);
+    fish.wanderTimeRemaining = Math.max(3.5, config.minWanderIntervalSeconds + random() * intervalRange);
   }
 
   const margin = Math.min(Math.max(1, fish.size * 12), Math.min(world.width, world.height) / 2);
@@ -36,12 +36,25 @@ export function updateFishMovement(
   const edgeY = Math.max(margin, Math.min(world.height - margin, fish.y));
   const safeWidth = Math.max(1, world.width - margin * 2);
   const safeHeight = Math.max(1, world.height - margin * 2);
-  const edgeProximityX = Math.min(1, Math.min(fish.x - margin, world.width - margin - fish.x) / Math.max(1, safeWidth * 0.18));
-  const edgeProximityY = Math.min(1, Math.min(fish.y - margin, world.height - margin - fish.y) / Math.max(1, safeHeight * 0.14));
-  const edgePushX = fish.x < world.width * 0.5 ? 1 : -1;
-  const edgePushY = fish.y < world.height * 0.5 ? 1 : -1;
-  const steerX = fish.targetDirectionX + edgePushX * (1 - Math.max(0, edgeProximityX)) * 1.25;
-  const steerY = fish.targetDirectionY + edgePushY * (1 - Math.max(0, edgeProximityY)) * 1.25;
+  // Avoid only nearby walls. The tank center is not a destination or attraction point.
+  const avoidXDistance = safeWidth * 0.14;
+  const avoidYDistance = safeHeight * 0.12;
+  const leftDistance = fish.x - margin;
+  const rightDistance = world.width - margin - fish.x;
+  const topDistance = fish.y - margin;
+  const bottomDistance = world.height - margin - fish.y;
+  const edgeAvoidX = leftDistance < avoidXDistance
+    ? (1 - Math.max(0, leftDistance) / avoidXDistance)
+    : rightDistance < avoidXDistance
+      ? -(1 - Math.max(0, rightDistance) / avoidXDistance)
+      : 0;
+  const edgeAvoidY = topDistance < avoidYDistance
+    ? (1 - Math.max(0, topDistance) / avoidYDistance)
+    : bottomDistance < avoidYDistance
+      ? -(1 - Math.max(0, bottomDistance) / avoidYDistance)
+      : 0;
+  const steerX = fish.targetDirectionX + edgeAvoidX * 1.1;
+  const steerY = fish.targetDirectionY + edgeAvoidY * 1.1;
 
   let separationX = 0;
   let separationY = 0;
