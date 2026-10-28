@@ -590,3 +590,30 @@ test("deactivated viewer fish is AI-controlled and is removed after its death de
   assert.notEqual(state.fish["ai-lifecycle-viewer"].id, entityId);
   assert.equal(state.fish["ai-lifecycle-viewer"].isAiControlled, false);
 });
+
+
+test("idle fish keep cruising without likes and change heading gradually", () => {
+  const state = createAquaLifeState(540, 960);
+  const join = normalizeTikTokEvent("member", {
+    msgId: "idle-swim-join",
+    user: { userId: "idle-swimmer", nickname: "Reef fish" }
+  }, 0);
+  assert.ok(join);
+  processGameEvent(state, join);
+  const fish = state.fish["idle-swimmer"];
+  const startX = fish.x;
+  const startY = fish.y;
+  let seed = 0x51a7;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  for (let i = 0; i < 100; i++) stepAquaLife(state, 50, (i + 1) * 50, random);
+
+  assert.ok(Math.hypot(fish.x - startX, fish.y - startY) > 20, "fish should swim even without likes");
+  assert.ok(fish.baseSpeedPxPerSecond >= 10, "idle speed should remain separate from like bonus");
+  assert.ok(Math.abs(fish.directionX) + Math.abs(fish.directionY) > 0.9);
+  assert.ok(fish.x > fish.size * 12 && fish.x < state.world.width - fish.size * 12);
+  assert.ok(fish.y > fish.size * 12 && fish.y < state.world.height - fish.size * 12);
+});
