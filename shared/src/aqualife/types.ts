@@ -153,6 +153,7 @@ export interface FishRenderModel {
   size: number;
   hp: number;
   maxHp: number | null;
+  baseAttackDamage: number;
   attackDamage: number;
   status: FishStatus;
   alpha: number;
